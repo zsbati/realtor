@@ -88,7 +88,7 @@ def reports(request):
         'status': status,
         'visit_type': visit_type,
     }
-    return render(request, 'reports.html', context)
+    return render(request, 'agenda/reports.html', context)
 
 @login_required
 def visit_list(request):
