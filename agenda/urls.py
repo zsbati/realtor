@@ -13,13 +13,14 @@ urlpatterns = [
     path('visit/new/', views.visit_create, name='visit_create'),
     path('visit/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
     path('visit/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
-    # User management URLs
-    path('password/change/', views.password_change, name='password_change'),
     # Reports URL
     path('reports/', views.reports, name='reports'),
     # Authentication URLs
-    path('login/', auth_views.LoginView.as_view(template_name='agenda/login.html'), name='login'),
-    path('logout/', views.logout, name='logout'),
+    path('login/', auth_views.LoginView.as_view(
+        template_name='agenda/login.html',
+        redirect_field_name='next',
+        success_url='/visits/'
+    ), name='login'),
 
     # Password reset URLs
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),

@@ -2,13 +2,13 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h2 class="mb-0">Update User: {{ user.username }}</h2>
+        <h2 class="mb-0">Editar Utilizador: {{ user.username }}</h2>
     </div>
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                <label for="{{ form.username.id_for_label }}" class="form-label">Usuário</label>
                 {{ form.username }}
                 {% if form.username.errors %}
                     <div class="text-danger">
@@ -26,7 +26,7 @@
                 {% endif %}
             </div>
             <div class="mb-3">
-                <label for="{{ form.is_staff.id_for_label }}" class="form-label">Staff Status</label>
+                <label for="{{ form.is_staff.id_for_label }}" class="form-label">Estatuto</label>
                 {{ form.is_staff }}
                 {% if form.is_staff.errors %}
                     <div class="text-danger">
@@ -35,7 +35,7 @@
                 {% endif %}
             </div>
             <div class="mb-3">
-                <label for="{{ form.is_active.id_for_label }}" class="form-label">Active Status</label>
+                <label for="{{ form.is_active.id_for_label }}" class="form-label">Ativo</label>
                 {{ form.is_active }}
                 {% if form.is_active.errors %}
                     <div class="text-danger">
@@ -43,8 +43,8 @@
                     </div>
                 {% endif %}
             </div>
-            <button type="submit" class="btn btn-primary">Update</button>
-            <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Atualizar</button>
+            <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Cancelar</a>
         </form>
     </div>
 </div>

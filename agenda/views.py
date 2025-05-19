@@ -1,18 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django import forms
-from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordResetView
+from django.contrib import messages
+from django.contrib.auth import logout as auth_logout
 from django.http import HttpResponse
 from django.utils import timezone
-from django.contrib.auth.views import PasswordResetView
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
+from datetime import datetime
 from .models import Visit
-from .forms import VisitFilterForm, VisitForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
+from .forms import VisitForm, VisitFilterForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
 import datetime
 
 # Create your views here.
@@ -21,6 +24,10 @@ import datetime
 def dashboard(request):
     today = datetime.date.today()
     
+    # Handle success message
+    if request.GET.get('success') == '1':
+        messages.success(request, 'Sua senha foi alterada com sucesso!')
+    
     # Get today's visits
     today_visits = Visit.objects.filter(
         scheduled_date__date=today
@@ -28,8 +35,8 @@ def dashboard(request):
     
     # Get upcoming visits (next 7 days)
     upcoming_visits = Visit.objects.filter(
-        scheduled_date__date__gte=today,
-        scheduled_date__date__lte=today + datetime.timedelta(days=7)
+        scheduled_date__gte=today,
+        scheduled_date__lte=today + datetime.timedelta(days=7)
     ).exclude(
         scheduled_date__date=today
     ).order_by('scheduled_date')[:5]
@@ -117,8 +124,11 @@ def reports(request):
 
 @login_required
 def visit_list(request):
-    today = datetime.date.today()
-    visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
+    visits = Visit.objects.all().order_by('-scheduled_date')
+    
+    # Handle success message
+    if request.GET.get('success') == '1':
+        messages.success(request, 'Sua senha foi alterada com sucesso!')
     
     # Handle Excel export
     if request.GET.get('export') == 'excel':
@@ -134,27 +144,7 @@ def visit_detail(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
     return render(request, 'visit_detail.html', {'visit': visit})
 
-@login_required
-def password_change(request):
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            new_password = form.cleaned_data['new_password1']
-            request.user.set_password(new_password)
-            request.user.save()
-            messages.success(request, 'Senha alterada com sucesso.')
-            if request.user.is_superuser:
-                return redirect('users:user_list')
-            return redirect('agenda:visit_list')
-    else:
-        form = PasswordChangeForm(request.user)
-    return render(request, 'password_change.html', {'form': form})
 
-@login_required
-def logout(request):
-    """Custom logout view that handles GET requests."""
-    auth_logout(request)
-    return redirect('agenda:login')
 
 @login_required
 def visit_create(request):
@@ -164,7 +154,10 @@ def visit_create(request):
             visit = form.save(commit=False)
             visit.created_by = request.user
             visit.save()
+            messages.success(request, 'Visita criada com sucesso!')
             return redirect('agenda:visit_list')
+        else:
+            messages.error(request, 'Erro ao criar visita. Por favor, corrija os erros abaixo.')
     else:
         form = VisitForm()
     return render(request, 'visit_form.html', {'form': form})
@@ -176,7 +169,8 @@ def visit_edit(request, pk):
         form = VisitForm(request.POST, instance=visit)
         if form.is_valid():
             visit = form.save()
-            return redirect('agenda:visit_list')
+            messages.success(request, 'Visita atualizada com sucesso!')
+            return redirect('agenda:dashboard')
     else:
         form = VisitForm(instance=visit)
     return render(request, 'visit_form.html', {'form': form})
@@ -246,64 +240,6 @@ def export_visits_to_excel(visits, filename):
     wb.save(response)
     return response
 
-def visit_list(request):
-    today = datetime.date.today()
-    visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
-    return render(request, 'visit_list.html', {'visits': visits})
-
-@login_required
-def visit_detail(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
-    return render(request, 'visit_detail.html', {'visit': visit})
-
-@login_required
-def password_change(request):
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            new_password = form.cleaned_data['new_password1']
-            request.user.set_password(new_password)
-            request.user.save()
-            messages.success(request, 'Senha alterada com sucesso.')
-            if request.user.is_superuser:
-                return redirect('users:user_list')
-            return redirect('agenda:visit_list')
-    else:
-        form = PasswordChangeForm(request.user)
-    return render(request, 'password_change.html', {'form': form})
-
-@login_required
-def logout(request):
-    """Custom logout view that handles GET requests."""
-    auth_logout(request)
-    return redirect('agenda:login')
-
-@login_required
-def visit_create(request):
-    if request.method == 'POST':
-        form = VisitForm(request.POST)
-        if form.is_valid():
-            visit = form.save(commit=False)
-            visit.created_by = request.user
-            visit.save()
-            return redirect('agenda:visit_list')
-    else:
-        form = VisitForm()
-    return render(request, 'visit_form.html', {'form': form})
-
-@login_required
-def visit_edit(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
-    if request.method == 'POST':
-        form = VisitForm(request.POST, instance=visit)
-        if form.is_valid():
-            visit = form.save()
-            return redirect('agenda:visit_list')
-    else:
-        form = VisitForm(instance=visit)
-    return render(request, 'visit_form.html', {'form': form})
-
-@login_required
 def visit_delete(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
     if request.method == 'POST':

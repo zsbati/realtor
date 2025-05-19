@@ -16,13 +16,14 @@ def user_list(request):
 def change_user_password(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == 'POST':
-        form = CustomUserChangeForm(request.POST, instance=user)
+        form = CustomUserChangeForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            user.set_password(form.cleaned_data['new_password'])
+            user.save()
             messages.success(request, 'Senha alterada com sucesso.')
             return redirect('users:user_list')
     else:
-        form = CustomUserChangeForm(instance=user)
+        form = CustomUserChangeForm()
     return render(request, 'users/change_password.html', {'form': form, 'user': user})
 
 @login_required
@@ -47,24 +48,13 @@ def update_user(request, user_id):
         form = UserUpdateForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
-            messages.success(request, f'User {user.username} has been updated.')
+            messages.success(request, f'Usuário {user.username} foi atualizado.')
             return redirect('users:user_list')
     else:
         form = UserUpdateForm(instance=user)
     return render(request, 'users/update_user.html', {'form': form, 'user': user})
 
-@login_required
-def change_password(request):
-    """Change user password."""
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Your password was successfully updated!')
-            return redirect('agenda:dashboard')
-    else:
-        form = PasswordChangeForm(request.user)
-    return render(request, 'users/change_password.html', {'form': form})
+
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
@@ -73,6 +63,6 @@ def delete_user(request, user_id):
     user = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         user.delete()
-        messages.success(request, f'User {user.username} has been deleted.')
+        messages.success(request, f'Usuário {user.username} foi eliminado.')
         return redirect('users:user_list')
     return render(request, 'users/delete_user.html', {'user': user})

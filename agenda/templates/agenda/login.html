@@ -13,19 +13,19 @@
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label for="id_username" class="form-label">Usuário</label>
-                        <input type="text" class="form-control" id="id_username" name="username" required>
+                        <label for="username" class="form-label">Usuário</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
                     </div>
                     <div class="mb-3">
-                        <label for="id_password" class="form-label">Senha</label>
-                        <input type="password" class="form-control" id="id_password" name="password" required>
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Entrar</button>
                     </div>
                 </form>
                 <div class="text-center mt-3">
-                    <a href="{% url 'agenda:password_reset' %}">Esqueceu sua senha?</a>
+                    <a href="{% url 'users:change_password' %}">Esqueceu sua senha?</a>
                 </div>
             </div>
         </div>

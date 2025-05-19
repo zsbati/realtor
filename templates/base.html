@@ -41,12 +41,17 @@
                             <span class="nav-link">Bem-vindo, {{ user.username }}</span>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'agenda:password_change' %}">
+                            <a class="nav-link" href="{% url 'users:change_password' %}">
                                 <i class="fas fa-key"></i> Alterar Senha
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'agenda:logout' %}">Sair</a>
+                            <form action="{% url 'users:logout' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link p-0">
+                                    <i class="fas fa-sign-out-alt"></i> Sair
+                                </button>
+                            </form>
                         </li>
                     {% else %}
                         <li class="nav-item">
@@ -72,6 +77,19 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Bootstrap components
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Initialize alerts
+        var alertList = [].slice.call(document.querySelectorAll('.alert'))
+        alertList.forEach(function (alert) {
+            new bootstrap.Alert(alert)
+        })
+    </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{% static 'js/select2-init.js' %}"></script>

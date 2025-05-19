@@ -1,6 +1,7 @@
 import os
 import sys
 import sqlite3
+import subprocess
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

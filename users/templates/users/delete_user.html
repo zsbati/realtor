@@ -2,17 +2,17 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h2 class="mb-0">Delete User</h2>
+        <h2 class="mb-0">Eliminar Utilizador</h2>
     </div>
     <div class="card-body">
         <p class="alert alert-danger">
-            Are you sure you want to delete user <strong>{{ user.username }}</strong>? This action cannot be undone.
+            Tem a certeza que deseja eliminar o utilizador <strong>{{ user.username }}</strong>? Esta ação não pode ser desfeita.
         </p>
         <form method="post" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Yes, Delete User</button>
+            <button type="submit" class="btn btn-danger">Sim, Apagar Utilizador</button>
         </form>
-        <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Cancel</a>
+        <a href="{% url 'users:user_list' %}" class="btn btn-secondary">Cancelar</a>
     </div>
 </div>
 {% endblock %}

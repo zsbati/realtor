@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Contratos{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">Contratos</h2>
+                    <div class="btn-group">
+                        <a href="{% url 'agenda:contract_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Novo Contrato
+                        </a>
+                        <a href="?export=excel" class="btn btn-success">
+                            <i class="fas fa-file-excel"></i> Exportar Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Imóvel</th>
+                                    <th>Tipo</th>
+                                    <th>Preço</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contract in contracts %}
+                                <tr>
+                                    <td>{{ contract.contract_number }}</td>
+                                    <td>{{ contract.contract_date|date:"d/m/Y" }}</td>
+                                    <td>{{ contract.client_name }}</td>
+                                    <td>{{ contract.property_address }}</td>
+                                    <td>{{ contract.get_transaction_type_display }}</td>
+                                    <td>{{ contract.price }}</td>
+                                    <td>
+                                        {% if contract.status == 'draft' %}
+                                            <span class="badge bg-warning">Rascunho</span>
+                                        {% elif contract.status == 'signed' %}
+                                            <span class="badge bg-success">Assinado</span>
+                                        {% elif contract.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelado</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Expirado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'agenda:contract_detail' contract.id %}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                            <a href="{% url 'agenda:contract_edit' contract.id %}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'agenda:contract_delete' contract.id %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja apagar este contrato?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">Nenhum contrato encontrado.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
