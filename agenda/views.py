@@ -7,6 +7,11 @@ from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.views import PasswordResetView
+from django.http import HttpResponse
+from django.utils import timezone
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 from .models import Visit
 from .forms import VisitForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
 import datetime
@@ -44,6 +49,14 @@ def dashboard(request):
     # Get users (only for superusers)
     users = User.objects.all() if request.user.is_superuser else None
     
+    # Handle Excel export
+    if request.GET.get('export') == 'excel':
+        visits = []
+        visits.extend(today_visits)
+        visits.extend(upcoming_visits)
+        visits.extend(recent_visits)
+        return export_visits_to_excel(visits, f'visitas_dashboard_{timezone.now().strftime("%Y%m%d")}.xlsx')
+
     context = {
         'today_visits': today_visits,
         'upcoming_visits': upcoming_visits,
@@ -81,6 +94,10 @@ def reports(request):
     if visit_type:
         visits = visits.filter(visit_type=visit_type)
     
+    # Handle Excel export
+    if request.GET.get('export') == 'excel':
+        return export_visits_to_excel(visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
+
     context = {
         'visits': visits,
         'start_date': start_date,
@@ -91,6 +108,136 @@ def reports(request):
     return render(request, 'agenda/reports.html', context)
 
 @login_required
+def visit_list(request):
+    today = datetime.date.today()
+    visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
+    
+    # Handle Excel export
+    if request.GET.get('export') == 'excel':
+        return export_visits_to_excel(visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
+
+    context = {
+        'visits': visits,
+    }
+    return render(request, 'visit_list.html', context)
+
+@login_required
+def visit_detail(request, pk):
+    visit = get_object_or_404(Visit, pk=pk)
+    return render(request, 'visit_detail.html', {'visit': visit})
+
+@login_required
+def password_change(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            new_password = form.cleaned_data['new_password1']
+            request.user.set_password(new_password)
+            request.user.save()
+            messages.success(request, 'Senha alterada com sucesso.')
+            if request.user.is_superuser:
+                return redirect('users:user_list')
+            return redirect('agenda:visit_list')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'password_change.html', {'form': form})
+
+@login_required
+def logout(request):
+    """Custom logout view that handles GET requests."""
+    auth_logout(request)
+    return redirect('agenda:login')
+
+@login_required
+def visit_create(request):
+    if request.method == 'POST':
+        form = VisitForm(request.POST)
+        if form.is_valid():
+            visit = form.save(commit=False)
+            visit.created_by = request.user
+            visit.save()
+            return redirect('agenda:visit_list')
+    else:
+        form = VisitForm()
+    return render(request, 'visit_form.html', {'form': form})
+
+@login_required
+def visit_edit(request, pk):
+    visit = get_object_or_404(Visit, pk=pk)
+    if request.method == 'POST':
+        form = VisitForm(request.POST, instance=visit)
+        if form.is_valid():
+            visit = form.save()
+            return redirect('agenda:visit_list')
+    else:
+        form = VisitForm(instance=visit)
+    return render(request, 'visit_form.html', {'form': form})
+
+@login_required
+def visit_delete(request, pk):
+    visit = get_object_or_404(Visit, pk=pk)
+    if request.method == 'POST':
+        visit.delete()
+        return redirect('agenda:visit_list')
+    return render(request, 'visit_confirm_delete.html', {'visit': visit})
+
+@login_required
+def export_visits_to_excel(visits, filename):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Visitas"
+    
+    # Add headers
+    headers = [
+        'Data/Hora', 'Tipo', 'Nome', 'Transação', 'Morada', 'Email',
+        'Telefone', 'Preço €', 'Estado', 'Comentários', 'Criado por',
+        'Criado em', 'Atualizado em'
+    ]
+    
+    # Style header
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+    
+    # Add data
+    for row_num, visit in enumerate(visits, 2):
+        ws.cell(row=row_num, column=1, value=visit.scheduled_date.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=2, value=visit.get_visit_type_display())
+        ws.cell(row=row_num, column=3, value=visit.name)
+        ws.cell(row=row_num, column=4, value=visit.get_transaction_type_display())
+        ws.cell(row=row_num, column=5, value=visit.address)
+        ws.cell(row=row_num, column=6, value=visit.email)
+        ws.cell(row=row_num, column=7, value=visit.phone)
+        ws.cell(row=row_num, column=8, value=str(visit.price))
+        ws.cell(row=row_num, column=9, value=visit.get_status_display())
+        ws.cell(row=row_num, column=10, value=visit.comment)
+        ws.cell(row=row_num, column=11, value=visit.created_by.username)
+        ws.cell(row=row_num, column=12, value=visit.created_at.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=13, value=visit.updated_at.strftime("%d/%m/%Y %H:%M"))
+    
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = get_column_letter(col[0].column)
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column].width = adjusted_width
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
+
 def visit_list(request):
     today = datetime.date.today()
     visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
