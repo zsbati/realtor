@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.views import PasswordResetView
@@ -56,6 +57,40 @@ def dashboard(request):
     return render(request, 'dashboard.html', context)
 
 @login_required
+def reports(request):
+    """View to display past visits with filtering capabilities."""
+    today = datetime.date.today()
+    
+    # Get filter parameters from GET request
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    status = request.GET.get('status')
+    visit_type = request.GET.get('visit_type')
+    
+    # Build filter queryset
+    visits = Visit.objects.filter(
+        scheduled_date__date__lt=today
+    ).order_by('-scheduled_date')
+    
+    if start_date:
+        visits = visits.filter(scheduled_date__date__gte=start_date)
+    if end_date:
+        visits = visits.filter(scheduled_date__date__lte=end_date)
+    if status:
+        visits = visits.filter(status=status)
+    if visit_type:
+        visits = visits.filter(visit_type=visit_type)
+    
+    context = {
+        'visits': visits,
+        'start_date': start_date,
+        'end_date': end_date,
+        'status': status,
+        'visit_type': visit_type,
+    }
+    return render(request, 'reports.html', context)
+
+@login_required
 def visit_list(request):
     today = datetime.date.today()
     visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
@@ -83,11 +118,18 @@ def password_change(request):
     return render(request, 'password_change.html', {'form': form})
 
 @login_required
+def logout(request):
+    """Custom logout view that handles GET requests."""
+    auth_logout(request)
+    return redirect('agenda:login')
+
+@login_required
 def visit_create(request):
     if request.method == 'POST':
         form = VisitForm(request.POST)
         if form.is_valid():
             visit = form.save(commit=False)
+            visit.created_by = request.user
             visit.save()
             return redirect('agenda:visit_list')
     else:

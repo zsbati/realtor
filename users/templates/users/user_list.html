@@ -41,7 +41,7 @@
                         <td>
                             <div class="btn-group">
                                 <a href="{% url 'users:update_user' user.id %}" class="btn btn-sm btn-primary">Editar</a>
-                                <a href="{% url 'users:change_user_password' pk=user.id %}" class="btn btn-sm btn-info">Alterar Senha</a>
+                                <a href="{% url 'users:change_user_password' user_id=user.id %}" class="btn btn-sm btn-info">Alterar Senha</a>
                                 <a href="{% url 'users:delete_user' user.id %}" class="btn btn-sm btn-danger">Apagar</a>
                             </div>
                         </td>

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">Relatórios de Visitas</h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <form method="get" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="start_date" class="form-label">Data Inicial</label>
+                                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request.GET.start_date }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="end_date" class="form-label">Data Final</label>
+                                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request.GET.end_date }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Concluído</option>
+                                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="visit_type" class="form-label">Tipo de Visita</label>
+                                <select name="visit_type" id="visit_type" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="visit" {% if request.GET.visit_type == 'visit' %}selected{% endif %}>Visita Presencial</option>
+                                    <option value="phone" {% if request.GET.visit_type == 'phone' %}selected{% endif %}>Telefone</option>
+                                    <option value="email" {% if request.GET.visit_type == 'email' %}selected{% endif %}>Email</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Filtrar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Tipo</th>
+                                    <th>Nome</th>
+                                    <th>Morada</th>
+                                    <th>Email</th>
+                                    <th>Telefone</th>
+                                    <th>Status</th>
+                                    <th>Comentários</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for visit in visits %}
+                                <tr>
+                                    <td>{{ visit.scheduled_date|date:"d/m/Y H:i" }}</td>
+                                    <td>
+                                        {% if visit.visit_type == 'visit' %}
+                                            <span class="badge bg-info">Visita Presencial</span>
+                                        {% elif visit.visit_type == 'phone' %}
+                                            <span class="badge bg-success">Telefone</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">Email</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ visit.name }}</td>
+                                    <td>{{ visit.address }}</td>
+                                    <td>{{ visit.email }}</td>
+                                    <td>{{ visit.phone }}</td>
+                                    <td>
+                                        {% if visit.status == 'completed' %}
+                                            <span class="badge bg-success">Concluído</span>
+                                        {% elif visit.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelado</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Agendado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ visit.comment }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'agenda:visit_edit' visit.id %}" class="btn btn-sm btn-primary">Editar</a>
+                                            <a href="{% url 'agenda:visit_detail' visit.id %}" class="btn btn-sm btn-info">Detalhes</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center">Nenhuma visita encontrada.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

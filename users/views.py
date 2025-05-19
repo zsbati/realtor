@@ -13,8 +13,8 @@ def user_list(request):
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
-def change_user_password(request, pk):
-    user = get_object_or_404(User, pk=pk)
+def change_user_password(request, user_id):
+    user = get_object_or_404(User, pk=user_id)
     if request.method == 'POST':
         form = CustomUserChangeForm(request.POST, instance=user)
         if form.is_valid():

@@ -15,10 +15,11 @@ urlpatterns = [
     path('visit/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
     # User management URLs
     path('password/change/', views.password_change, name='password_change'),
-
+    # Reports URL
+    path('reports/', views.reports, name='reports'),
     # Authentication URLs
     path('login/', auth_views.LoginView.as_view(template_name='agenda/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='agenda:login'), name='logout'),
+    path('logout/', views.logout, name='logout'),
 
     # Password reset URLs
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
