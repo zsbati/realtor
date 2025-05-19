@@ -17,7 +17,7 @@ class Visit(models.Model):
 
     title = models.CharField(max_length=200, verbose_name='Título')
     name = models.CharField(max_length=200, verbose_name='Nome')
-    address = models.CharField(max_length=500, verbose_name='Morada')
+    address = models.CharField(max_length=500, verbose_name='Morada', blank=True, null=True)
     description = models.TextField(verbose_name='Descrição', blank=True, null=True)
     visit_type = models.CharField(max_length=10, choices=VISIT_TYPES, default='visit', verbose_name='Tipo de Visita')
     scheduled_date = models.DateTimeField(verbose_name='Data/Hora Agendada')
@@ -28,6 +28,14 @@ class Visit(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Criado por')
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Criado em')
     updated_at = models.DateTimeField(default=timezone.now, verbose_name='Atualizado em')
+    price = models.CharField(max_length=100, verbose_name='Preço', blank=True, null=True, help_text='Exemplo: 750-800 euros')
+    TRANSACTION_TYPES = [
+        ('vender', 'Vender'),
+        ('arrendar', 'Arrendar'),
+        ('alugar', 'Alugar'),
+        ('comprar', 'Comprar')
+    ]
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES, verbose_name='Tipo de Transação')
 
     def __str__(self):
         return f"{self.title} - {self.name} ({self.get_visit_type_display()})"

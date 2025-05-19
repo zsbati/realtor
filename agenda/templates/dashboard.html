@@ -51,7 +51,10 @@
                                     <tr>
                                         <th>Título</th>
                                         <th>Data/Hora</th>
-                                        <th>Status</th>
+                                        <th>Transação</th>
+                                        <th>Tipo</th>
+                                        <th>Preço €</th>
+                                        <th>Estado</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
@@ -60,6 +63,9 @@
                                     <tr>
                                         <td>{{ visit.title }}</td>
                                         <td>{{ visit.scheduled_date|date:"H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display }}</td>
+                                        <td>{{ visit.get_visit_type_display }}</td>
+                                        <td>{{ visit.price }}</td>
                                         <td>{{ visit.get_status_display }}</td>
                                         <td>
                                             <a href="{% url 'agenda:visit_detail' visit.pk %}" class="btn btn-sm btn-info">
@@ -67,6 +73,9 @@
                                             </a>
                                             <a href="{% url 'agenda:visit_edit' visit.pk %}" class="btn btn-sm btn-warning">
                                                 <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'agenda:visit_delete' visit.pk %}" class="btn btn-sm btn-danger" onclick="return confirm('Tem a certeza que quer eliminar esta visita?')">
+                                                <i class="fas fa-trash"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -102,8 +111,10 @@
                                     <tr>
                                         <th>Título</th>
                                         <th>Data/Hora</th>
+                                        <th>Tipo de Transação</th>
                                         <th>Tipo</th>
-                                        <th>Status</th>
+                                        <th>Preço €</th>
+                                        <th>Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -111,7 +122,9 @@
                                     <tr>
                                         <td>{{ visit.title }}</td>
                                         <td>{{ visit.scheduled_date|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display }}</td>
                                         <td>{{ visit.get_visit_type_display }}</td>
+                                        <td>{{ visit.price }}</td>
                                         <td>{{ visit.get_status_display }}</td>
                                     </tr>
                                     {% endfor %}
@@ -146,8 +159,10 @@
                                     <tr>
                                         <th>Título</th>
                                         <th>Data/Hora</th>
+                                        <th>Tipo de Transação</th>
                                         <th>Tipo</th>
-                                        <th>Status</th>
+                                        <th>Preço €</th>
+                                        <th>Estado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -155,7 +170,9 @@
                                     <tr>
                                         <td>{{ visit.title }}</td>
                                         <td>{{ visit.scheduled_date|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display }}</td>
                                         <td>{{ visit.get_visit_type_display }}</td>
+                                        <td>{{ visit.price }}</td>
                                         <td>{{ visit.get_status_display }}</td>
                                     </tr>
                                     {% endfor %}
@@ -221,4 +238,32 @@
         </div>
     </div>
 </div>
+
+    <!-- Visit Detail Modal -->
+    <div class="modal fade" id="visitDetailModal" tabindex="-1" aria-labelledby="visitDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="visitDetailModalLabel">Detalhes da Visita</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="visitDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add click event listener to all eye icons
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('a[href*="visit_detail"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Simply redirect to the visit detail page
+                    window.location.href = this.href;
+                });
+            });
+        });
+    </script>
 {% endblock %}

@@ -18,9 +18,11 @@
                         <thead>
                             <tr>
                                 <th>Título</th>
+                                <th>Tipo de Transação</th>
                                 <th>Tipo</th>
                                 <th>Data/Hora</th>
-                                <th>Status</th>
+                                <th>Preço €</th>
+                                <th>Estado</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -28,8 +30,10 @@
                             {% for visit in visits %}
                             <tr>
                                 <td>{{ visit.title }}</td>
+                                <td>{{ visit.get_transaction_type_display }}</td>
                                 <td>{{ visit.get_visit_type_display }}</td>
                                 <td>{{ visit.scheduled_date|date:"d/m/Y H:i" }}</td>
+                                <td>{{ visit.price }}</td>
                                 <td>{{ visit.get_status_display }}</td>
                                 <td>
                                     <a href="{% url 'agenda:visit_detail' visit.pk %}" class="btn btn-sm btn-info">
