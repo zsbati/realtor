@@ -13,6 +13,44 @@ import datetime
 # Create your views here.
 
 @login_required
+def dashboard(request):
+    today = datetime.date.today()
+    
+    # Get today's visits
+    today_visits = Visit.objects.filter(
+        scheduled_date__date=today
+    ).order_by('scheduled_date')
+    
+    # Get upcoming visits (next 7 days)
+    upcoming_visits = Visit.objects.filter(
+        scheduled_date__date__gte=today,
+        scheduled_date__date__lte=today + datetime.timedelta(days=7)
+    ).exclude(
+        scheduled_date__date=today
+    ).order_by('scheduled_date')[:5]
+    
+    # Get recent visits (last 7 days)
+    recent_visits = Visit.objects.filter(
+        scheduled_date__date__gte=today - datetime.timedelta(days=7),
+        scheduled_date__date__lt=today
+    ).order_by('-scheduled_date')[:5]
+    
+    # Get visit statistics
+    total_visits = Visit.objects.count()
+    today_visits_count = today_visits.count()
+    upcoming_visits_count = upcoming_visits.count()
+    
+    context = {
+        'today_visits': today_visits,
+        'upcoming_visits': upcoming_visits,
+        'recent_visits': recent_visits,
+        'total_visits': total_visits,
+        'today_visits_count': today_visits_count,
+        'upcoming_visits_count': upcoming_visits_count,
+    }
+    return render(request, 'dashboard.html', context)
+
+@login_required
 def visit_list(request):
     today = datetime.date.today()
     visits = Visit.objects.filter(scheduled_date__date=today).order_by('scheduled_date')
@@ -124,7 +162,7 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('agenda:visit_list')
+            return redirect('agenda:dashboard')
         else:
             messages.error(request, 'Nome de usuário ou senha inválidos.')
     return render(request, 'agenda/login.html')

@@ -5,8 +5,10 @@ from . import views
 app_name = 'agenda'
 
 urlpatterns = [
+    # Dashboard URL
+    path('', views.dashboard, name='dashboard'),
     # Visit URLs
-    path('', views.visit_list, name='visit_list'),
+    path('visits/', views.visit_list, name='visit_list'),
     path('visit/<int:pk>/', views.visit_detail, name='visit_detail'),
     path('visit/new/', views.visit_create, name='visit_create'),
     path('visit/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
