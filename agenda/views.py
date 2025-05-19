@@ -1,19 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
-from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth import logout as auth_logout
+from django import forms
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.views import PasswordResetView
 from django.http import HttpResponse
 from django.utils import timezone
+from django.contrib.auth.views import PasswordResetView
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill
+from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 from .models import Visit
-from .forms import VisitForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
+from .forms import VisitFilterForm, VisitForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
 import datetime
 
 # Create your views here.
@@ -74,38 +73,47 @@ def reports(request):
     """View to display past visits with filtering capabilities."""
     today = datetime.date.today()
     
-    # Get filter parameters from GET request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    status = request.GET.get('status')
-    visit_type = request.GET.get('visit_type')
-    
-    # Build filter queryset
-    visits = Visit.objects.filter(
-        scheduled_date__date__lt=today
-    ).order_by('-scheduled_date')
-    
-    if start_date:
-        visits = visits.filter(scheduled_date__date__gte=start_date)
-    if end_date:
-        visits = visits.filter(scheduled_date__date__lte=end_date)
-    if status:
-        visits = visits.filter(status=status)
-    if visit_type:
-        visits = visits.filter(visit_type=visit_type)
-    
-    # Handle Excel export
-    if request.GET.get('export') == 'excel':
-        return export_visits_to_excel(visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
-
-    context = {
-        'visits': visits,
-        'start_date': start_date,
-        'end_date': end_date,
-        'status': status,
-        'visit_type': visit_type,
-    }
-    return render(request, 'agenda/reports.html', context)
+    if request.method == 'POST':
+        form = VisitFilterForm(request.POST)
+        if form.is_valid():
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            visit_type = form.cleaned_data['visit_type']
+            status = form.cleaned_data['status']
+            
+            # Filter for completed visits by default
+            visits = Visit.objects.filter(status='completed')
+            
+            if start_date:
+                visits = visits.filter(scheduled_date__gte=start_date)
+            if end_date:
+                visits = visits.filter(scheduled_date__lte=end_date)
+            if visit_type:
+                visits = visits.filter(visit_type=visit_type)
+            
+            visits = visits.order_by('-scheduled_date')
+            
+            if request.GET.get('export') == 'excel':
+                return export_visits_to_excel(visits)
+            
+            context = {
+                'form': form,
+                'visits': visits,
+            }
+            return render(request, 'agenda/reports.html', context)
+    else:
+        form = VisitFilterForm()
+        # Filter for completed visits by default
+        visits = Visit.objects.filter(status='completed').order_by('-scheduled_date')
+        
+        if request.GET.get('export') == 'excel':
+            return export_visits_to_excel(visits)
+        
+        context = {
+            'form': form,
+            'visits': visits,
+        }
+        return render(request, 'agenda/reports.html', context)
 
 @login_required
 def visit_list(request):

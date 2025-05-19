@@ -62,6 +62,41 @@ class CustomUserChangeForm(UserChangeForm):
 
         return cleaned_data
 
+class VisitFilterForm(forms.Form):
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    visit_type = forms.ChoiceField(
+        required=False,
+        choices=[('', 'Todos')] + Visit.VISIT_TYPES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    status = forms.ChoiceField(
+        required=False,
+        choices=[('', 'Todos')] + Visit.STATUS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set initial status to 'completed' by default
+        self.fields['status'].initial = 'completed'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError('A data inicial não pode ser posterior à data final.')
+
+        return cleaned_data
+
 class PasswordChangeForm(forms.Form):
     current_password = forms.CharField(
         label="Senha Atual",
