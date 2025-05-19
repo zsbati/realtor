@@ -13,7 +13,16 @@
                     <p class="card-text">
                         <strong>Tipo:</strong> {{ visit.get_visit_type_display }}<br>
                         <strong>Data/Hora:</strong> {{ visit.scheduled_date|date:"d/m/Y H:i" }}<br>
-                        <strong>Estado:</strong> {{ visit.get_status_display }}<br>
+                        <strong>Estado:</strong> 
+                            {% if visit.status == 'completed' %}
+                                <span class="badge bg-success">{{ visit.get_status_display }}</span>
+                            {% elif visit.status == 'cancelled' %}
+                                <span class="badge bg-danger">{{ visit.get_status_display }}</span>
+                            {% elif visit.status == 'forgotten' %}
+                                <span class="badge bg-warning">{{ visit.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ visit.get_status_display }}</span>
+                            {% endif %}<br>
                         <strong>Nome:</strong> {{ visit.name }}<br>
                         <strong>Tipo de Transação:</strong> {{ visit.get_transaction_type_display }}<br>
                         <strong>Morada:</strong> {{ visit.address }}<br>

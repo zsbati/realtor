@@ -83,6 +83,8 @@
                                             <span class="badge bg-success">Concluído</span>
                                         {% elif visit.status == 'cancelled' %}
                                             <span class="badge bg-danger">Cancelado</span>
+                                        {% elif visit.status == 'forgotten' %}
+                                            <span class="badge bg-warning">Esquecido</span>
                                         {% else %}
                                             <span class="badge bg-secondary">Agendado</span>
                                         {% endif %}

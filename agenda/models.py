@@ -12,7 +12,8 @@ class Visit(models.Model):
     STATUS_CHOICES = [
         ('scheduled', 'Agendado'),
         ('completed', 'Concluído'),
-        ('cancelled', 'Cancelado')
+        ('cancelled', 'Cancelado'),
+        ('forgotten', 'Esquecido')
     ]
 
     title = models.CharField(max_length=200, verbose_name='Título')

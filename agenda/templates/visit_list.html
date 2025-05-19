@@ -34,7 +34,17 @@
                                 <td>{{ visit.get_visit_type_display }}</td>
                                 <td>{{ visit.scheduled_date|date:"d/m/Y H:i" }}</td>
                                 <td>{{ visit.price }}</td>
-                                <td>{{ visit.get_status_display }}</td>
+                                <td>
+                                    {% if visit.status == 'completed' %}
+                                        <span class="badge bg-success">{{ visit.get_status_display }}</span>
+                                    {% elif visit.status == 'cancelled' %}
+                                        <span class="badge bg-danger">{{ visit.get_status_display }}</span>
+                                    {% elif visit.status == 'forgotten' %}
+                                        <span class="badge bg-warning">{{ visit.get_status_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ visit.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <a href="{% url 'agenda:visit_detail' visit.pk %}" class="btn btn-sm btn-info">
                                         <i class="fas fa-eye"></i>

@@ -215,12 +215,12 @@
                                     <td>{{ user.email }}</td>
                                     <td>
                                         {% if user.is_staff %}
-                                        <span class="badge bg-success">Sim</span>
-                                        {% else %}
-                                        <span class="badge bg-secondary">Não</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
+                                        <select name="status" id="status" class="form-select">
+                                         <option value="">Todos</option>
+                                         <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Concluído</option>
+                                         <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+                                         <option value="forgotten" {% if request.GET.status == 'forgotten' %}selected{% endif %}>Esquecido</option>
+                                     </select>
                                         <a href="{% url 'users:update_user' user.id %}" class="btn btn-sm btn-info">
                                             <i class="fas fa-edit"></i>
                                         </a>
