@@ -40,6 +40,9 @@ def dashboard(request):
     today_visits_count = today_visits.count()
     upcoming_visits_count = upcoming_visits.count()
     
+    # Get users (only for superusers)
+    users = User.objects.all() if request.user.is_superuser else None
+    
     context = {
         'today_visits': today_visits,
         'upcoming_visits': upcoming_visits,
@@ -47,6 +50,8 @@ def dashboard(request):
         'total_visits': total_visits,
         'today_visits_count': today_visits_count,
         'upcoming_visits_count': upcoming_visits_count,
+        'users': users,
+        'user_list_url': 'users:user_list',
     }
     return render(request, 'dashboard.html', context)
 
@@ -71,7 +76,7 @@ def password_change(request):
             request.user.save()
             messages.success(request, 'Senha alterada com sucesso.')
             if request.user.is_superuser:
-                return redirect('agenda:user_list')
+                return redirect('users:user_list')
             return redirect('agenda:visit_list')
     else:
         form = PasswordChangeForm(request.user)
@@ -110,50 +115,6 @@ def visit_delete(request, pk):
     return render(request, 'visit_confirm_delete.html', {'visit': visit})
 
 # User management views
-
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
-def user_list(request):
-    users = User.objects.all()
-    return render(request, 'user_list.html', {'users': users})
-
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
-def user_add(request):
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, 'Usuário criado com sucesso.')
-            return redirect('user_list')
-    else:
-        form = CustomUserCreationForm()
-    return render(request, 'user_form.html', {'form': form})
-
-@login_required
-def user_change_password(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    
-    if request.method == 'POST':
-        form = CustomUserChangeForm(request.POST, instance=user)
-        if form.is_valid():
-            user = form.save()
-            messages.success(request, 'Senha alterada com sucesso.')
-            return redirect('user_list')
-    else:
-        form = CustomUserChangeForm(instance=user)
-    
-    return render(request, 'user_form.html', {'form': form, 'user': user})
-
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
-def user_delete(request, pk):
-    user = get_object_or_404(User, pk=pk)
-    if request.method == 'POST':
-        user.delete()
-        messages.success(request, 'Usuário excluído com sucesso.')
-        return redirect('user_list')
-    return render(request, 'user_confirm_delete.html', {'user': user})
 
 def user_login(request):
     if request.method == 'POST':

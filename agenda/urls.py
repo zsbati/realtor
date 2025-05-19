@@ -16,13 +16,11 @@ urlpatterns = [
     # User management URLs
     path('password/change/', views.password_change, name='password_change'),
 
-    # User management URLs
-    path('login/', views.user_login, name='login'),
-    path('logout/', views.user_logout, name='logout'),
-    path('users/', views.user_list, name='user_list'),
-    path('users/new/', views.user_add, name='user_add'),
-    path('users/<int:pk>/password/', views.user_change_password, name='user_change_password'),
-    path('users/<int:pk>/delete/', views.user_delete, name='user_delete'),
+    # Authentication URLs
+    path('login/', auth_views.LoginView.as_view(template_name='agenda/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='agenda:login'), name='logout'),
+
+    # Password reset URLs
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

@@ -27,7 +27,7 @@
                         </li>
                         {% if user.is_superuser %}
                             <li class="nav-item">
-                                <a class="nav-link" href="{% url 'agenda:user_list' %}">Usuários</a>
+                                <a class="nav-link" href="{% url 'users:user_list' %}">Usuários</a>
                             </li>
                         {% endif %}
                     {% endif %}
