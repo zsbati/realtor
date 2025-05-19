@@ -1,12 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
-
-class CustomUser(AbstractUser):
-    """Custom user model for the realtor system."""
-    class Meta:
-        verbose_name = 'Usuário'
-        verbose_name_plural = 'Usuários'
+from django.contrib.auth.models import User
 
 class Visit(models.Model):
     VISIT_TYPES = [
@@ -31,7 +25,7 @@ class Visit(models.Model):
     email = models.EmailField(verbose_name='Email', blank=True, null=True)
     phone = models.CharField(max_length=20, verbose_name='Telefone', blank=True, null=True)
     comment = models.TextField(verbose_name='Comentários', blank=True, null=True)
-    created_by = models.ForeignKey('CustomUser', on_delete=models.SET_NULL, null=True, verbose_name='Criado por')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name='Criado por')
     created_at = models.DateTimeField(default=timezone.now, verbose_name='Criado em')
     updated_at = models.DateTimeField(default=timezone.now, verbose_name='Atualizado em')
 

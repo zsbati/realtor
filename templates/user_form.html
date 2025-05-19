@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if user %}Editar Usuário{% else %}Novo Usuário{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-center">{% if user %}Editar Usuário{% else %}Novo Usuário{% endif %}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Usuário</label>
+                        <input type="text" class="form-control" id="id_username" name="username" value="{{ user.username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="id_email" name="email" value="{{ user.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password1" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="id_password1" name="password1" {% if not user %}required{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password2" class="form-label">Confirmar Senha</label>
+                        <input type="password" class="form-control" id="id_password2" name="password2" {% if not user %}required{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="id_is_superuser" name="is_superuser" {% if user.is_superuser %}checked{% endif %}>
+                            <label class="form-check-label" for="id_is_superuser">
+                                Superusuário
+                            </label>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
