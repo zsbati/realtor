@@ -60,6 +60,51 @@ class CustomUserChangeForm(UserChangeForm):
 
         return cleaned_data
 
+class PasswordChangeForm(forms.Form):
+    current_password = forms.CharField(
+        label="Senha Atual",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    new_password1 = forms.CharField(
+        label="Nova Senha",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+    new_password2 = forms.CharField(
+        label="Confirmar Nova Senha",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=True
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        current_password = cleaned_data.get('current_password')
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
+
+        if not self.user.check_password(current_password):
+            raise forms.ValidationError("A senha atual está incorreta.")
+
+        if new_password1 and new_password2 and new_password1 != new_password2:
+            raise forms.ValidationError("As novas senhas não coincidem.")
+
+        return cleaned_data
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+        
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("As senhas não coincidem.")
+
+        return cleaned_data
+
     def save(self, commit=True):
         user = super().save(commit=False)
         password = self.cleaned_data.get('password1')

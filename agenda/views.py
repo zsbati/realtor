@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.views import PasswordResetView
 from .models import Visit
-from .forms import VisitForm, CustomUserCreationForm, CustomUserChangeForm
+from .forms import VisitForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
 import datetime
 
 # Create your views here.
@@ -22,6 +22,22 @@ def visit_list(request):
 def visit_detail(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
     return render(request, 'visit_detail.html', {'visit': visit})
+
+@login_required
+def password_change(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            new_password = form.cleaned_data['new_password1']
+            request.user.set_password(new_password)
+            request.user.save()
+            messages.success(request, 'Senha alterada com sucesso.')
+            if request.user.is_superuser:
+                return redirect('agenda:user_list')
+            return redirect('agenda:visit_list')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'password_change.html', {'form': form})
 
 @login_required
 def visit_create(request):

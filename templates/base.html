@@ -35,6 +35,11 @@
                             <span class="nav-link">Bem-vindo, {{ user.username }}</span>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'agenda:password_change' %}">
+                                <i class="fas fa-key"></i> Alterar Senha
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'agenda:logout' %}">Sair</a>
                         </li>
                     {% else %}

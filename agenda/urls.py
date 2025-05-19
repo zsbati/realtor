@@ -11,6 +11,8 @@ urlpatterns = [
     path('visit/new/', views.visit_create, name='visit_create'),
     path('visit/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
     path('visit/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
+    # User management URLs
+    path('password/change/', views.password_change, name='password_change'),
 
     # User management URLs
     path('login/', views.user_login, name='login'),
