@@ -25,9 +25,26 @@ A web application for managing real estate visits and appointments.
   - Price
   - Email and phone contact
   - Comments
+- View contract status directly from visit details
+
+### Contract Management
+- Create and manage property contracts
+- Track contract status (draft, active, completed, cancelled)
+- Store important contract details:
+  - Property information
+  - Parties involved
+  - Contract terms and conditions
+  - Signing date and expiration
+  - Payment schedules
+  - Attachments and documents
+- Link contracts to related visits and properties
+- Generate contract PDFs
+- Send contracts for e-signature
 
 ### Reports
-- View completed visits only
+- View completed visits and contracts
+- Filter contracts by status and date range
+- Export contract data to Excel
 - Filter visits by:
   - Date range
   - Visit type
@@ -74,8 +91,10 @@ python manage.py runserver
 - Python 3.10+
 - Django 5.2.1
 - openpyxl (for Excel export)
+- reportlab (for PDF generation)
+- django-crispy-forms (for better form rendering)
 - Bootstrap 5
-- Font Awesome
+- Font Awesome 6
 
 ## License
 
