@@ -1,40 +1,27 @@
 import os
-from pathlib import Path
 
-def is_important_file(f):
-    """Check if file should be included in tree."""
-    # Include only .py files and important config files
-    return f.endswith('.py') and not f.startswith('.') and not f.endswith('.pyc')
+# Directories and files to ignore
+IGNORE_DIRS = {'.git', '__pycache__', 'venv', 'env', 'migrations', 'staticfiles', '.idea', '.vscode', 'node_modules'}
+IGNORE_FILES = {'.DS_Store', 'Thumbs.db'}
 
-def generate_tree(startpath):
-    print("Project Structure")
-    print("=" * 50)
-    
-    # Only show important directories
-    important_dirs = ['realtor', 'agenda', 'templates']
-    
-    for root, dirs, files in os.walk(startpath):
-        # Skip virtual environment and other directories
-        if any(d in root for d in ['venv', '__pycache__', '.git']):
-            continue
-            
-        # Skip non-important directories
-        if not any(d in root for d in important_dirs):
-            continue
-            
-        level = root.replace(str(startpath), '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        
-        # Only show directory name if it's in important_dirs
-        dir_name = os.path.basename(root)
-        if dir_name in important_dirs or any(d in dir_name for d in important_dirs):
-            print(f"{indent}{dir_name}/")
-        
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            if is_important_file(f):
-                print(f"{subindent}{f}")
+def generate_tree(directory, max_depth=3, indent="", current_depth=0):
+    if current_depth > max_depth:
+        return
+    entries = sorted(os.listdir(directory))
+    entries = [e for e in entries if e not in IGNORE_FILES]
+    dirs = [e for e in entries if os.path.isdir(os.path.join(directory, e)) and e not in IGNORE_DIRS]
+    files = [e for e in entries if os.path.isfile(os.path.join(directory, e)) and e not in IGNORE_FILES]
+
+    for idx, dirname in enumerate(dirs):
+        is_last = (idx == len(dirs) - 1 and not files)
+        print(f"{indent}{'└── ' if is_last else '├── '}{dirname}/")
+        generate_tree(os.path.join(directory, dirname), max_depth, indent + ("    " if is_last else "│   "), current_depth + 1)
+
+    for idx, filename in enumerate(files):
+        is_last = (idx == len(files) - 1)
+        print(f"{indent}{'└── ' if is_last else '├── '}{filename}")
 
 if __name__ == "__main__":
-    project_path = Path(__file__).resolve().parent
-    generate_tree(project_path)
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    print(os.path.basename(project_root) + "/")
+    generate_tree(project_root, max_depth=3)
