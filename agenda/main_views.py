@@ -152,13 +152,18 @@ def visit_create(request):
         if form.is_valid():
             visit = form.save(commit=False)
             visit.created_by = request.user
+            # Ensure the datetime is timezone-aware
+            if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
+                visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
             visit.save()
             messages.success(request, 'Visita criada com sucesso!')
             return redirect('agenda:visit_list')
         else:
             messages.error(request, 'Erro ao criar visita. Por favor, corrija os erros abaixo.')
     else:
-        form = VisitForm()
+        # Set initial time to next hour by default
+        next_hour = timezone.now().replace(minute=0, second=0, microsecond=0) + timezone.timedelta(hours=1)
+        form = VisitForm(initial={'scheduled_date': next_hour})
     return render(request, 'visit_form.html', {'form': form})
 
 @login_required
@@ -167,12 +172,16 @@ def visit_edit(request, pk):
     if request.method == 'POST':
         form = VisitForm(request.POST, instance=visit)
         if form.is_valid():
-            visit = form.save()
+            visit = form.save(commit=False)
+            # Ensure the datetime is timezone-aware
+            if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
+                visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+            visit.save()
             messages.success(request, 'Visita atualizada com sucesso!')
             return redirect('agenda:dashboard')
     else:
         form = VisitForm(instance=visit)
-    return render(request, 'visit_form.html', {'form': form})
+    return render(request, 'visit_form.html', {'form': form, 'editing': True})
 
 @login_required
 def visit_delete(request, pk):

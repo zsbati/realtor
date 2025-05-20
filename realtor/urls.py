@@ -20,5 +20,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('agenda.urls', namespace='agenda')),
-    path('', include('users.urls', namespace='users')),
+    path('users/', include('users.urls', namespace='users')),
 ]

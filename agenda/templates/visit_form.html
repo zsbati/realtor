@@ -85,12 +85,18 @@
                     
                     <div class="mb-3">
                         <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">Data e Hora</label>
-                        {{ form.scheduled_date }}
+                        <div class="input-group">
+                            {{ form.scheduled_date }}
+                            <span class="input-group-text">
+                                <i class="far fa-calendar-alt"></i>
+                            </span>
+                        </div>
                         {% if form.scheduled_date.errors %}
                             <div class="text-danger">
                                 {{ form.scheduled_date.errors|join:", " }}
                             </div>
                         {% endif %}
+                        <small class="form-text text-muted">Selecione a data e hora da visita</small>
                     </div>
                     
                     <div class="mb-3">

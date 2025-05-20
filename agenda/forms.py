@@ -9,6 +9,21 @@ class VisitForm(forms.ModelForm):
     class Meta:
         model = Visit
         fields = ['title', 'name', 'address', 'description', 'visit_type', 'scheduled_date', 'status', 'email', 'phone', 'comment', 'transaction_type', 'price']
+        widgets = {
+            'scheduled_date': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control flatpickr',
+                    'placeholder': 'Selecione a data e hora',
+                },
+                format='%Y-%m-%d %H:%M'
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set the input format for the datetime field
+        self.fields['scheduled_date'].input_formats = ['%Y-%m-%d %H:%M']
 
 
 class ContractForm(forms.ModelForm):

@@ -26,7 +26,7 @@ class PasswordChangeForm(forms.Form):
         self.user = user
         super().__init__(*args, **kwargs)
 
-class CustomUserChangeForm(UserChangeForm):
+class CustomUserChangeForm(forms.Form):
     """Form for superusers to change other users' passwords."""
     new_password = forms.CharField(
         label='Nova Senha',
@@ -39,9 +39,9 @@ class CustomUserChangeForm(UserChangeForm):
         required=True
     )
 
-    class Meta:
-        model = User
-        fields = ()
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -52,9 +52,9 @@ class CustomUserChangeForm(UserChangeForm):
             raise forms.ValidationError('As senhas não coincidem.')
         return cleaned_data
 
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.set_password(self.cleaned_data['new_password'])
-        if commit:
-            user.save()
-        return user
+    def save(self):
+        if self.user:
+            self.user.set_password(self.cleaned_data['new_password'])
+            self.user.save()
+            return self.user
+        return None

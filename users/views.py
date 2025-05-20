@@ -16,14 +16,19 @@ def user_list(request):
 def change_user_password(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     if request.method == 'POST':
-        form = CustomUserChangeForm(request.POST)
+        form = CustomUserChangeForm(request.POST, user=user)
         if form.is_valid():
-            user.set_password(form.cleaned_data['new_password'])
-            user.save()
-            messages.success(request, 'Senha alterada com sucesso.')
-            return redirect('users:user_list')
+            try:
+                # Save the form which will handle setting the password
+                form.save()
+                messages.success(request, 'Senha alterada com sucesso.')
+                return redirect('users:user_list')
+            except Exception as e:
+                messages.error(request, f'Erro ao alterar senha: {str(e)}')
+        else:
+            messages.error(request, 'Formulário inválido. Por favor, corrija os erros.')
     else:
-        form = CustomUserChangeForm()
+        form = CustomUserChangeForm(user=user)
     return render(request, 'users/change_password.html', {'form': form, 'user': user})
 
 @login_required
