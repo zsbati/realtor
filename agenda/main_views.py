@@ -158,11 +158,22 @@ def visit_calendar_events(request):
     
     try:
         # Parse the ISO format dates and handle timezone
-        start = timezone.make_aware(dt.fromisoformat(start_date.replace('Z', '+00:00')))
-        end = timezone.make_aware(dt.fromisoformat(end_date.replace('Z', '+00:00')))
+        if start_date and end_date:
+            # Handle both formats: with 'Z' and with timezone offset
+            if start_date.endswith('Z'):
+                start = timezone.make_aware(dt.fromisoformat(start_date.replace('Z', '+00:00')))
+            else:
+                start = timezone.make_aware(dt.fromisoformat(start_date))
+                
+            if end_date.endswith('Z'):
+                end = timezone.make_aware(dt.fromisoformat(end_date.replace('Z', '+00:00')))
+            else:
+                end = timezone.make_aware(dt.fromisoformat(end_date))
+        else:
+            raise ValueError("Missing start or end date")
     except (ValueError, TypeError) as e:
         # Default to current month if dates are invalid
-        today = timezone.now()
+        today = timezone.localtime()
         start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end = (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
@@ -214,24 +225,27 @@ def visit_create(request):
     if request.method == 'POST':
         form = VisitForm(request.POST)
         if form.is_valid():
-            visit = form.save(commit=False)
-            visit.created_by = request.user
-            
-            # Ensure the datetime is timezone-aware
-            if visit.scheduled_date:
-                if not timezone.is_aware(visit.scheduled_date):
-                    visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
-                # Ensure the timezone is set to the current timezone
-                visit.scheduled_date = timezone.localtime(visit.scheduled_date)
+            try:
+                visit = form.save(commit=False)
+                visit.created_by = request.user
                 
-            visit.save()
-            messages.success(request, 'Visita criada com sucesso!')
-            return redirect('agenda:visit_list')
+                # Ensure the datetime is timezone-aware
+                if visit.scheduled_date:
+                    if not timezone.is_aware(visit.scheduled_date):
+                        visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+                    # Ensure the timezone is set to the current timezone
+                    visit.scheduled_date = timezone.localtime(visit.scheduled_date)
+                
+                visit.save()
+                messages.success(request, 'Visita criada com sucesso!')
+                return redirect('agenda:visit_list')
+            except Exception as e:
+                messages.error(request, f'Erro ao salvar visita: {str(e)}')
         else:
             messages.error(request, 'Erro ao criar visita. Por favor, corrija os erros abaixo.')
     else:
-        # Set initial time to next hour by default
-        next_hour = timezone.now().replace(minute=0, second=0, microsecond=0) + timezone.timedelta(hours=1)
+        # Set initial time to next hour by default, in local time
+        next_hour = timezone.localtime().replace(minute=0, second=0, microsecond=0) + timezone.timedelta(hours=1)
         form = VisitForm(initial={'scheduled_date': next_hour})
     return render(request, 'visit_form.html', {'form': form})
 
@@ -241,20 +255,26 @@ def visit_edit(request, pk):
     if request.method == 'POST':
         form = VisitForm(request.POST, instance=visit)
         if form.is_valid():
-            visit = form.save(commit=False)
-            # Ensure the datetime is timezone-aware
-            if visit.scheduled_date:
-                if not timezone.is_aware(visit.scheduled_date):
-                    visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
-                # Ensure the timezone is set to the current timezone
-                visit.scheduled_date = timezone.localtime(visit.scheduled_date)
+            try:
+                visit = form.save(commit=False)
+                # Ensure the datetime is timezone-aware
+                if visit.scheduled_date:
+                    if not timezone.is_aware(visit.scheduled_date):
+                        visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+                    # Ensure the timezone is set to the current timezone
+                    visit.scheduled_date = timezone.localtime(visit.scheduled_date)
                 
-            visit.save()
-            messages.success(request, 'Visita atualizada com sucesso!')
-            return redirect('agenda:dashboard')
+                visit.save()
+                messages.success(request, 'Visita atualizada com sucesso!')
+                return redirect('agenda:visit_detail', pk=visit.pk)
+            except Exception as e:
+                messages.error(request, f'Erro ao atualizar visita: {str(e)}')
     else:
+        # Ensure we're working with a timezone-aware datetime
+        if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
+            visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
         form = VisitForm(instance=visit)
-    return render(request, 'visit_form.html', {'form': form, 'editing': True})
+    return render(request, 'visit_form.html', {'form': form, 'visit': visit})
 
 @login_required
 def visit_delete(request, pk):
@@ -286,24 +306,27 @@ def export_visits_to_excel(request, visits, filename):
     
     # Add data
     for row_num, visit in enumerate(visits, 2):
-        # Convert naive datetimes to timezone-aware
-        scheduled_date = timezone.make_aware(visit.scheduled_date) if timezone.is_naive(visit.scheduled_date) else visit.scheduled_date
-        created_at = timezone.make_aware(visit.created_at) if timezone.is_naive(visit.created_at) else visit.created_at
-        updated_at = timezone.make_aware(visit.updated_at) if timezone.is_naive(visit.updated_at) else visit.updated_at
+        # Format datetimes with timezone handling
+        def format_datetime(dt_value):
+            if not dt_value:
+                return ''
+            if timezone.is_naive(dt_value):
+                dt_value = timezone.make_aware(dt_value)
+            return timezone.localtime(dt_value).strftime("%d/%m/%Y %H:%M")
         
-        ws.cell(row=row_num, column=1, value=scheduled_date.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=1, value=format_datetime(visit.scheduled_date))
         ws.cell(row=row_num, column=2, value=visit.get_visit_type_display())
         ws.cell(row=row_num, column=3, value=visit.name)
-        ws.cell(row=row_num, column=4, value=visit.get_transaction_type_display())
-        ws.cell(row=row_num, column=5, value=visit.address)
-        ws.cell(row=row_num, column=6, value=visit.email)
-        ws.cell(row=row_num, column=7, value=visit.phone)
-        ws.cell(row=row_num, column=8, value=str(visit.price))
+        ws.cell(row=row_num, column=4, value=visit.get_transaction_type_display() if visit.transaction_type else '')
+        ws.cell(row=row_num, column=5, value=visit.address or '')
+        ws.cell(row=row_num, column=6, value=visit.email or '')
+        ws.cell(row=row_num, column=7, value=visit.phone or '')
+        ws.cell(row=row_num, column=8, value=str(visit.price) if visit.price is not None else '')
         ws.cell(row=row_num, column=9, value=visit.get_status_display())
-        ws.cell(row=row_num, column=10, value=visit.comment)
+        ws.cell(row=row_num, column=10, value=visit.comment or '')
         ws.cell(row=row_num, column=11, value=getattr(visit.created_by, 'username', 'N/A'))
-        ws.cell(row=row_num, column=12, value=created_at.strftime("%d/%m/%Y %H:%M"))
-        ws.cell(row=row_num, column=13, value=updated_at.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=12, value=format_datetime(visit.created_at))
+        ws.cell(row=row_num, column=13, value=format_datetime(visit.updated_at))
     
     # Adjust column widths
     for col in ws.columns:
