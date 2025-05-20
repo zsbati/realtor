@@ -12,6 +12,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.9/dist/themes/material_blue.css">
     <link rel="stylesheet" href="{% static 'css/flatpickr-custom.css' %}">
+    
+    <!-- FullCalendar CSS -->
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="{% static 'css/calendar.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -37,27 +42,33 @@
                             <a class="nav-link" href="{% url 'agenda:contract_list' %}">Contratos</a>
                         </li>
                         {% if user.is_superuser %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'users:user_list' %}">Usuários</a>
-                            </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'users:user_list' %}">Usuários</a>
+                        </li>
                         {% endif %}
+
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'agenda:calendar_view' %}">
+                                <i class="far fa-calendar-alt me-1"></i>Calendário
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <span class="nav-link">Bem-vindo, {{ user.username }}</span>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'users:change_password' %}">
-                                <i class="fas fa-key"></i> Alterar Senha
+                                <i class="fas fa-key me-2"></i>Alterar Senha
                             </a>
                         </li>
                         <li class="nav-item">
                             <form action="{% url 'users:logout' %}" method="post" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-link nav-link p-0">
-                                    <i class="fas fa-sign-out-alt"></i> Sair
+                                    <i class="fas fa-sign-out-alt me-2"></i>Sair
                                 </button>
                             </form>
                         </li>
@@ -101,6 +112,11 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="{% static 'js/select2-init.js' %}"></script>
+    
+    <!-- FullCalendar JS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js'></script>
+    <script src="{% static 'js/calendar.js' %}"></script>
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>

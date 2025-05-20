@@ -8,14 +8,18 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 from django.contrib import messages
 from django.contrib.auth import logout as auth_logout
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+from django.db.models import Q
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
-from datetime import datetime
+from datetime import datetime as dt, timedelta
+from django.utils import timezone
 from .models import Visit
 from .forms import VisitForm, VisitFilterForm, CustomUserCreationForm, CustomUserChangeForm, PasswordChangeForm
+import json
 import datetime
 
 # Create your views here.
@@ -138,6 +142,66 @@ def visit_list(request):
     }
     return render(request, 'visit_list.html', context)
 
+
+@login_required
+def calendar_view(request):
+    """Render the calendar view."""
+    return render(request, 'calendar.html')
+
+
+@login_required
+@require_http_methods(["GET"])
+def visit_calendar_events(request):
+    """API endpoint for calendar events."""
+    start_date = request.GET.get('start')
+    end_date = request.GET.get('end')
+    
+    try:
+        # Parse the ISO format dates and handle timezone
+        start = timezone.make_aware(dt.fromisoformat(start_date.replace('Z', '+00:00')))
+        end = timezone.make_aware(dt.fromisoformat(end_date.replace('Z', '+00:00')))
+    except (ValueError, TypeError) as e:
+        # Default to current month if dates are invalid
+        today = timezone.now()
+        start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    # Get visits within the date range
+    visits = Visit.objects.filter(
+        scheduled_date__gte=start,
+        scheduled_date__lte=end
+    ).order_by('scheduled_date')
+    
+    events = []
+    for visit in visits:
+        if visit.scheduled_date:
+            events.append({
+                'id': visit.id,
+                'title': f"{visit.name} - {visit.get_visit_type_display()}",
+                'start': visit.scheduled_date.isoformat(),
+                'end': (visit.scheduled_date + timedelta(hours=1)).isoformat(),
+                'url': f"/visit/{visit.id}/",
+                'color': get_visit_color(visit.visit_type),
+                'extendedProps': {
+                    'visit_type': visit.visit_type,
+                    'address': visit.address,
+                    'description': visit.description,
+                    'status': visit.status,
+                }
+            })
+    
+    return JsonResponse(events, safe=False)
+
+
+def get_visit_color(visit_type):
+    """Return color based on visit type."""
+    colors = {
+        'visit': '#0d6efd',  # Blue
+        'phone': '#6f42c1',  # Purple
+        'email': '#20c997',  # Teal
+    }
+    return colors.get(visit_type, '#6c757d')  # Default to gray
+
 @login_required
 def visit_detail(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
@@ -152,9 +216,14 @@ def visit_create(request):
         if form.is_valid():
             visit = form.save(commit=False)
             visit.created_by = request.user
+            
             # Ensure the datetime is timezone-aware
-            if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
-                visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+            if visit.scheduled_date:
+                if not timezone.is_aware(visit.scheduled_date):
+                    visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+                # Ensure the timezone is set to the current timezone
+                visit.scheduled_date = timezone.localtime(visit.scheduled_date)
+                
             visit.save()
             messages.success(request, 'Visita criada com sucesso!')
             return redirect('agenda:visit_list')
@@ -174,8 +243,12 @@ def visit_edit(request, pk):
         if form.is_valid():
             visit = form.save(commit=False)
             # Ensure the datetime is timezone-aware
-            if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
-                visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+            if visit.scheduled_date:
+                if not timezone.is_aware(visit.scheduled_date):
+                    visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
+                # Ensure the timezone is set to the current timezone
+                visit.scheduled_date = timezone.localtime(visit.scheduled_date)
+                
             visit.save()
             messages.success(request, 'Visita atualizada com sucesso!')
             return redirect('agenda:dashboard')
