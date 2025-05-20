@@ -57,11 +57,9 @@ def dashboard(request):
     
     # Handle Excel export
     if request.GET.get('export') == 'excel':
-        visits = []
-        visits.extend(today_visits)
-        visits.extend(upcoming_visits)
-        visits.extend(recent_visits)
-        return export_visits_to_excel(visits, f'visitas_dashboard_{timezone.now().strftime("%Y%m%d")}.xlsx')
+        # Get all visits from the database
+        all_visits = Visit.objects.all().order_by('-scheduled_date')
+        return export_visits_to_excel(request, all_visits, f'visitas_dashboard_{timezone.now().strftime("%Y%m%d")}.xlsx')
 
     context = {
         'today_visits': today_visits,
@@ -114,7 +112,7 @@ def reports(request):
         visits = Visit.objects.filter(status='completed').order_by('-scheduled_date')
         
         if request.GET.get('export') == 'excel':
-            return export_visits_to_excel(visits)
+            return export_visits_to_excel(request, visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
         
         context = {
             'form': form,
@@ -132,7 +130,8 @@ def visit_list(request):
     
     # Handle Excel export
     if request.GET.get('export') == 'excel':
-        return export_visits_to_excel(visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
+        visits = Visit.objects.all().order_by('-scheduled_date')
+        return export_visits_to_excel(request, visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
 
     context = {
         'visits': visits,
@@ -184,7 +183,7 @@ def visit_delete(request, pk):
     return render(request, 'visit_confirm_delete.html', {'visit': visit})
 
 @login_required
-def export_visits_to_excel(visits, filename):
+def export_visits_to_excel(request, visits, filename):
     wb = Workbook()
     ws = wb.active
     ws.title = "Visitas"
@@ -205,7 +204,12 @@ def export_visits_to_excel(visits, filename):
     
     # Add data
     for row_num, visit in enumerate(visits, 2):
-        ws.cell(row=row_num, column=1, value=visit.scheduled_date.strftime("%d/%m/%Y %H:%M"))
+        # Convert naive datetimes to timezone-aware
+        scheduled_date = timezone.make_aware(visit.scheduled_date) if timezone.is_naive(visit.scheduled_date) else visit.scheduled_date
+        created_at = timezone.make_aware(visit.created_at) if timezone.is_naive(visit.created_at) else visit.created_at
+        updated_at = timezone.make_aware(visit.updated_at) if timezone.is_naive(visit.updated_at) else visit.updated_at
+        
+        ws.cell(row=row_num, column=1, value=scheduled_date.strftime("%d/%m/%Y %H:%M"))
         ws.cell(row=row_num, column=2, value=visit.get_visit_type_display())
         ws.cell(row=row_num, column=3, value=visit.name)
         ws.cell(row=row_num, column=4, value=visit.get_transaction_type_display())
@@ -215,9 +219,9 @@ def export_visits_to_excel(visits, filename):
         ws.cell(row=row_num, column=8, value=str(visit.price))
         ws.cell(row=row_num, column=9, value=visit.get_status_display())
         ws.cell(row=row_num, column=10, value=visit.comment)
-        ws.cell(row=row_num, column=11, value=visit.created_by.username)
-        ws.cell(row=row_num, column=12, value=visit.created_at.strftime("%d/%m/%Y %H:%M"))
-        ws.cell(row=row_num, column=13, value=visit.updated_at.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=11, value=getattr(visit.created_by, 'username', 'N/A'))
+        ws.cell(row=row_num, column=12, value=created_at.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=row_num, column=13, value=updated_at.strftime("%d/%m/%Y %H:%M"))
     
     # Adjust column widths
     for col in ws.columns:
