@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.utils import timezone
 from .models import Visit, Contract
 
 User = get_user_model()
@@ -23,7 +24,12 @@ class VisitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Set the input format for the datetime field
-        self.fields['scheduled_date'].input_formats = ['%Y-%m-%d %H:%M']
+        self.fields['scheduled_date'].input_formats = ['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M']
+        
+        # If we have an instance with a timezone-aware datetime, convert it to local time
+        if 'scheduled_date' in self.initial and self.initial['scheduled_date']:
+            if timezone.is_aware(self.initial['scheduled_date']):
+                self.initial['scheduled_date'] = timezone.localtime(self.initial['scheduled_date']).strftime('%Y-%m-%dT%H:%M')
 
 
 class ContractForm(forms.ModelForm):
