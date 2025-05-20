@@ -1,20 +1,27 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from . import views
+from agenda.main_views import dashboard, reports, visit_list, visit_detail, visit_create, visit_edit, visit_delete, export_visits_to_excel
+from agenda.views.contract_views import contract_list, contract_detail, contract_create, contract_edit, contract_delete, export_contracts_to_excel
 
 app_name = 'agenda'
 
 urlpatterns = [
     # Dashboard URL
-    path('', views.dashboard, name='dashboard'),
+    path('', dashboard, name='dashboard'),
     # Visit URLs
-    path('visits/', views.visit_list, name='visit_list'),
-    path('visit/<int:pk>/', views.visit_detail, name='visit_detail'),
-    path('visit/new/', views.visit_create, name='visit_create'),
-    path('visit/<int:pk>/edit/', views.visit_edit, name='visit_edit'),
-    path('visit/<int:pk>/delete/', views.visit_delete, name='visit_delete'),
+    path('visits/', visit_list, name='visit_list'),
+    path('visit/<int:pk>/', visit_detail, name='visit_detail'),
+    path('visit/new/', visit_create, name='visit_create'),
+    path('visit/<int:pk>/edit/', visit_edit, name='visit_edit'),
+    path('visit/<int:pk>/delete/', visit_delete, name='visit_delete'),
     # Reports URL
-    path('reports/', views.reports, name='reports'),
+    path('reports/', reports, name='reports'),
+    # Contract URLs
+    path('contracts/', contract_list, name='contract_list'),
+    path('contract/<int:pk>/', contract_detail, name='contract_detail'),
+    path('contract/new/', contract_create, name='contract_create'),
+    path('contract/<int:pk>/edit/', contract_edit, name='contract_edit'),
+    path('contract/<int:pk>/delete/', contract_delete, name='contract_delete'),
     # Authentication URLs
     path('login/', auth_views.LoginView.as_view(
         template_name='agenda/login.html',

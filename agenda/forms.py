@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import Visit
+from .models import Visit, Contract
 
 User = get_user_model()
 
@@ -9,6 +9,25 @@ class VisitForm(forms.ModelForm):
     class Meta:
         model = Visit
         fields = ['title', 'name', 'address', 'description', 'visit_type', 'scheduled_date', 'status', 'email', 'phone', 'comment', 'transaction_type', 'price']
+
+
+class ContractForm(forms.ModelForm):
+    class Meta:
+        model = Contract
+        fields = ['title', 'contract_type', 'client_name', 'property_address', 'value', 'status', 'comment', 'signing_date']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'client_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'property_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'value': forms.NumberInput(attrs={'class': 'form-control'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'signing_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['contract_type'].widget.attrs.update({'class': 'form-control'})
+        self.fields['status'].widget.attrs.update({'class': 'form-control'})
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -22,14 +41,7 @@ class VisitForm(forms.ModelForm):
             'price': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['visit_type'].widget.attrs.update({'class': 'form-control'})
-        self.fields['status'].widget.attrs.update({'class': 'form-control'})
-        
-        # Format the scheduled_date for datetime-local input
-        if self.instance.pk and self.instance.scheduled_date:
-            self.initial['scheduled_date'] = self.instance.scheduled_date.strftime('%Y-%m-%dT%H:%M')
+
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta:

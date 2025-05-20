@@ -1,101 +1,75 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Detalhes do Contrato{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h2 class="mb-0">Detalhes do Contrato</h2>
-                    <div class="btn-group">
-                        <a href="{% url 'agenda:contract_edit' contract.id %}" class="btn btn-primary">
-                            <i class="fas fa-edit"></i> Editar
-                        </a>
-                        <a href="{% url 'agenda:contract_delete' contract.id %}" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja apagar este contrato?')">
-                            <i class="fas fa-trash"></i> Apagar
-                        </a>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">Detalhes do Contrato</h2>
+            <div class="btn-group">
+                <a href="{% url 'agenda:contract_edit' contract.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Editar
+                </a>
+                <a href="{% url 'agenda:contract_delete' contract.pk %}" class="btn btn-danger" onclick="return confirm('Tem a certeza que quer apagar este contrato?')">
+                    <i class="fas fa-trash"></i> Apagar
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Informações Básicas</h5>
+                    <div class="mb-3">
+                        <strong>Título:</strong> {{ contract.title }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Tipo:</strong> {{ contract.get_contract_type_display }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Cliente:</strong> {{ contract.client_name }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Valor:</strong> €{{ contract.value }}
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Número do Contrato:</label>
-                                <p class="form-control-plaintext">{{ contract.contract_number }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Data do Contrato:</label>
-                                <p class="form-control-plaintext">{{ contract.contract_date|date:"d/m/Y" }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Cliente:</label>
-                                <p class="form-control-plaintext">{{ contract.client_name }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Morada do Imóvel:</label>
-                                <p class="form-control-plaintext">{{ contract.property_address }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Transação:</label>
-                                <p class="form-control-plaintext">{{ contract.get_transaction_type_display }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Preço:</label>
-                                <p class="form-control-plaintext">{{ contract.price }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Status:</label>
-                                <p class="form-control-plaintext">
-                                    {% if contract.status == 'draft' %}
-                                        <span class="badge bg-warning">Rascunho</span>
-                                    {% elif contract.status == 'signed' %}
-                                        <span class="badge bg-success">Assinado</span>
-                                    {% elif contract.status == 'cancelled' %}
-                                        <span class="badge bg-danger">Cancelado</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Expirado</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Criado por:</label>
-                                <p class="form-control-plaintext">{{ contract.created_by }}</p>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Criado em:</label>
-                                <p class="form-control-plaintext">{{ contract.created_at|date:"d/m/Y H:i" }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
+                <div class="col-md-6">
+                    <h5>Informações Adicionais</h5>
                     <div class="mb-3">
-                        <label class="form-label">Documentos:</label>
-                        {% if contract.documents %}
-                            <a href="{{ contract.documents.url }}" class="btn btn-sm btn-info" target="_blank">
-                                <i class="fas fa-file-alt"></i> Ver Documento
-                            </a>
-                        {% else %}
-                            <p class="form-control-plaintext">Nenhum documento anexado</p>
-                        {% endif %}
+                        <strong>Status:</strong>
+                        <span class="badge {% if contract.status == 'signed' %}bg-success{% elif contract.status == 'draft' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ contract.get_status_display }}
+                        </span>
                     </div>
-                    
                     <div class="mb-3">
-                        <label class="form-label">Notas:</label>
-                        <p class="form-control-plaintext">{{ contract.notes|linebreaks }}</p>
+                        <strong>Data de Assinatura:</strong> {{ contract.signing_date|date:"d/m/Y" }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Criado por:</strong> {{ contract.created_by.username }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Criado em:</strong> {{ contract.created_at|date:"d/m/Y H:i" }}
                     </div>
                 </div>
+            </div>
+            
+            <div class="mb-3">
+                <h5>Morada da Propriedade</h5>
+                <p>{{ contract.property_address }}</p>
+            </div>
+
+            {% if contract.comment %}
+            <div class="mb-3">
+                <h5>Comentários</h5>
+                <p>{{ contract.comment }}</p>
+            </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{% url 'agenda:contract_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar à Lista
+                </a>
             </div>
         </div>
     </div>

@@ -1,36 +1,33 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Apagar Contrato{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="mb-0">Apagar Contrato</h2>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-danger">
-                        <h4 class="alert-heading">Tem certeza que deseja apagar este contrato?</h4>
-                        <p>Número do Contrato: {{ contract.contract_number }}</p>
-                        <p>Cliente: {{ contract.client_name }}</p>
-                        <p>Imóvel: {{ contract.property_address }}</p>
-                    </div>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="d-flex justify-content-end">
-                            <a href="{% url 'agenda:contract_list' %}" class="btn btn-secondary me-2">
-                                <i class="fas fa-arrow-left"></i> Cancelar
-                            </a>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Confirmar Apagar
-                            </button>
-                        </div>
-                    </form>
-                </div>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="mb-0">Apagar Contrato</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Tem a certeza que quer apagar este contrato?</h4>
+                <p>Contrato: <strong>{{ contract.title }}</strong></p>
+                <p>Tipo: <strong>{{ contract.get_contract_type_display }}</strong></p>
+                <p>Cliente: <strong>{{ contract.client_name }}</strong></p>
             </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'agenda:contract_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Confirmar Apagar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

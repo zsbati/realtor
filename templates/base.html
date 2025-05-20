@@ -28,6 +28,9 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'agenda:reports' %}">Relatórios</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'agenda:contract_list' %}">Contratos</a>
+                        </li>
                         {% if user.is_superuser %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'users:user_list' %}">Usuários</a>
