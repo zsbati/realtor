@@ -63,6 +63,16 @@ def dashboard(request):
         scheduled_date__date__range=[recent_start, recent_end]
     ).order_by('-scheduled_date')
     
+    # Handle Excel export
+    export_type = request.GET.get('export')
+    if export_type:
+        if export_type == 'today':
+            return export_visits_to_excel(request, today_visits, 'visitas_hoje.xlsx')
+        elif export_type == 'upcoming':
+            return export_visits_to_excel(request, upcoming_visits, 'proximas_visitas.xlsx')
+        elif export_type == 'recent':
+            return export_visits_to_excel(request, recent_visits, 'visitas_recentes.xlsx')
+    
     # Get counts for statistics cards
     today_visits_count = today_visits.count()
     upcoming_visits_count = upcoming_visits.count()
@@ -82,8 +92,8 @@ def dashboard(request):
         'today_visits_count': today_visits_count,
         'upcoming_visits_count': upcoming_visits_count,
         'recent_visits_count': recent_visits_count,
-        'total_visits': total_visits_count,  # Changed from total_visits_count to match template
-        'users': users,  # Add users to the context
+        'total_visits': total_visits_count,
+        'users': users,
     }
     
     return render(request, 'agenda/dashboard/dashboard.html', context)

@@ -14,9 +14,6 @@
                         <a href="{% url 'agenda:reports' %}?export=excel{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visit_type %}&visit_type={{ request.GET.visit_type }}{% endif %}" class="btn btn-success">
                             <i class="fas fa-file-excel"></i> Exportar Excel
                         </a>
-                        <a href="{% url 'agenda:reports' %}?export=excel{% if request.GET.start_date %}&start_date={{ request.GET.start_date }}{% endif %}{% if request.GET.end_date %}&end_date={{ request.GET.end_date }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.visit_type %}&visit_type={{ request.GET.visit_type }}{% endif %}" class="btn btn-success">
-                            <i class="fas fa-file-excel"></i> Exportar Excel
-                        </a>
                     </div>
                 </div>
                 <div class="card-body">

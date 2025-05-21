@@ -105,8 +105,8 @@
                         <a href="{% url 'agenda:visit_list' %}?today=1" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-list me-1"></i> Ver Todas
                         </a>
-                        <a href="{% url 'agenda:dashboard' %}?export=excel" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
-                            <i class="fas fa-file-excel"></i>
+                        <a href="?export=today" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i> Exportar
                         </a>
                     </div>
                 </div>
@@ -179,8 +179,8 @@
                         <a href="{% url 'agenda:visit_list' %}?upcoming=1" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-list me-1"></i> Ver Todas
                         </a>
-                        <a href="{% url 'agenda:dashboard' %}?export=upcoming" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
-                            <i class="fas fa-file-excel"></i>
+                        <a href="?export=upcoming" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i> Exportar
                         </a>
                     </div>
                 </div>
@@ -253,8 +253,8 @@
                         <a href="{% url 'agenda:visit_list' %}" class="btn btn-sm btn-outline-primary">
                             <i class="fas fa-list me-1"></i> Ver Todas
                         </a>
-                        <a href="{% url 'agenda:dashboard' %}?export=recent" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
-                            <i class="fas fa-file-excel"></i>
+                        <a href="?export=recent" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i> Exportar
                         </a>
                     </div>
                 </div>
