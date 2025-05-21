@@ -355,11 +355,11 @@ def export_visits_to_excel(request, visits, filename):
     ws = wb.active
     ws.title = "Visitas"
     
-    # Add headers
+    # Headers - using fields that exist in your model
     headers = [
-        'Título', 'Tipo', 'Cliente', 'Email', 'Telefone', 'Morada', 'Preço',
-        'Tipo de Imóvel', 'Área', 'Quartos', 'Casas de Banho', 'Estado',
-        'Data Agendada', 'Criado por', 'Criado em', 'Atualizado em', 'Comentários'
+        'Título', 'Nome', 'Email', 'Telefone', 'Morada', 
+        'Tipo de Visita', 'Status', 'Data/Hora Agendada', 
+        'Preço', 'Tipo de Transação', 'Comentários', 'Criado por'
     ]
     
     # Style header
@@ -371,23 +371,18 @@ def export_visits_to_excel(request, visits, filename):
     
     # Add data
     for row_num, visit in enumerate(visits, 2):
-        ws.cell(row=row_num, column=1, value=visit.title)
-        ws.cell(row=row_num, column=2, value=visit.get_visit_type_display())
-        ws.cell(row=row_num, column=3, value=visit.client_name)
-        ws.cell(row=row_num, column=4, value=visit.client_email or '')
-        ws.cell(row=row_num, column=5, value=visit.client_phone or '')
-        ws.cell(row=row_num, column=6, value=visit.property_address or '')
-        ws.cell(row=row_num, column=7, value=str(visit.property_price) if visit.property_price else '')
-        ws.cell(row=row_num, column=8, value=visit.get_property_type_display() if visit.property_type else '')
-        ws.cell(row=row_num, column=9, value=visit.property_area or '')
-        ws.cell(row=row_num, column=10, value=visit.property_bedrooms or '')
-        ws.cell(row=row_num, column=11, value=visit.property_bathrooms or '')
-        ws.cell(row=row_num, column=12, value=visit.get_status_display())
-        ws.cell(row=row_num, column=13, value=visit.scheduled_date.strftime("%d/%m/%Y %H:%M") if visit.scheduled_date else '')
-        ws.cell(row=row_num, column=14, value=getattr(visit.created_by, 'username', 'N/A'))
-        ws.cell(row=row_num, column=15, value=visit.created_at.strftime("%d/%m/%Y %H:%M") if visit.created_at else '')
-        ws.cell(row=row_num, column=16, value=visit.updated_at.strftime("%d/%m/%Y %H:%M") if visit.updated_at else '')
-        ws.cell(row=row_num, column=17, value=visit.comments or '')
+        ws.cell(row=row_num, column=1, value=visit.title or '')
+        ws.cell(row=row_num, column=2, value=visit.name or '')
+        ws.cell(row=row_num, column=3, value=visit.email or '')
+        ws.cell(row=row_num, column=4, value=visit.phone or '')
+        ws.cell(row=row_num, column=5, value=visit.address or '')
+        ws.cell(row=row_num, column=6, value=visit.get_visit_type_display() if hasattr(visit, 'get_visit_type_display') else '')
+        ws.cell(row=row_num, column=7, value=visit.get_status_display() if hasattr(visit, 'get_status_display') else '')
+        ws.cell(row=row_num, column=8, value=visit.scheduled_date.strftime("%d/%m/%Y %H:%M") if visit.scheduled_date else '')
+        ws.cell(row=row_num, column=9, value=visit.price or '')
+        ws.cell(row=row_num, column=10, value=visit.get_transaction_type_display() if hasattr(visit, 'get_transaction_type_display') else '')
+        ws.cell(row=row_num, column=11, value=visit.comment or '')  # Fixed: using comment (singular)
+        ws.cell(row=row_num, column=12, value=getattr(visit.created_by, 'username', '') if visit.created_by else '')
     
     # Adjust column widths
     for col in ws.columns:
@@ -395,12 +390,12 @@ def export_visits_to_excel(request, visits, filename):
         column = get_column_letter(col[0].column)
         for cell in col:
             try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
+                if len(str(cell.value or '')) > max_length:
+                    max_length = len(str(cell.value or ''))
             except:
                 pass
         adjusted_width = (max_length + 2)
-        ws.column_dimensions[column].width = adjusted_width
+        ws.column_dimensions[column].width = min(adjusted_width, 50)
     
     # Create response
     response = HttpResponse(
@@ -409,7 +404,7 @@ def export_visits_to_excel(request, visits, filename):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
-
+    
 # User management views
 
 def user_login(request):
