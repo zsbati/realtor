@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
@@ -7,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 from django.contrib import messages
-from django.contrib.auth import logout as auth_logout
+from django.contrib.auth import logout as auth_logout, login, authenticate
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -26,199 +27,250 @@ import datetime
 
 @login_required
 def dashboard(request):
-    today = datetime.date.today()
+    # Get current time in the user's timezone
+    now = timezone.localtime(timezone.now())
+    today = now.date()
     
     # Handle success message
     if request.GET.get('success') == '1':
         messages.success(request, 'Sua senha foi alterada com sucesso!')
     
-    # Get today's visits
+    # Get today's visits (timezone-aware)
+    today_start = timezone.make_aware(
+        datetime.datetime.combine(today, datetime.time.min),
+        timezone.get_current_timezone()
+    )
+    today_end = timezone.make_aware(
+        datetime.datetime.combine(today, datetime.time.max),
+        timezone.get_current_timezone()
+    )
+    
     today_visits = Visit.objects.filter(
         scheduled_date__date=today
     ).order_by('scheduled_date')
     
-    # Get upcoming visits (next 7 days)
+    # Get upcoming visits (next 7 days, timezone-aware)
+    upcoming_start = today + datetime.timedelta(days=1)
+    upcoming_end = today + datetime.timedelta(days=7)
     upcoming_visits = Visit.objects.filter(
-        scheduled_date__gte=today,
-        scheduled_date__lte=today + datetime.timedelta(days=7)
-    ).exclude(
-        scheduled_date__date=today
-    ).order_by('scheduled_date')[:5]
+        scheduled_date__date__range=[upcoming_start, upcoming_end]
+    ).order_by('scheduled_date')
     
-    # Get recent visits (last 7 days)
+    # Get recent visits (past 7 days, timezone-aware)
+    recent_start = today - datetime.timedelta(days=7)
+    recent_end = today - datetime.timedelta(days=1)
     recent_visits = Visit.objects.filter(
-        scheduled_date__date__gte=today - datetime.timedelta(days=7),
-        scheduled_date__date__lt=today
-    ).order_by('-scheduled_date')[:5]
+        scheduled_date__date__range=[recent_start, recent_end]
+    ).order_by('-scheduled_date')
     
-    # Get visit statistics
-    total_visits = Visit.objects.count()
+    # Get counts for statistics cards
     today_visits_count = today_visits.count()
     upcoming_visits_count = upcoming_visits.count()
+    recent_visits_count = recent_visits.count()
+    total_visits_count = Visit.objects.count()
     
-    # Get users (only for superusers)
-    users = User.objects.all() if request.user.is_superuser else None
+    # Get all users
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    users = User.objects.all().order_by('username')
     
-    # Handle Excel export
-    if request.GET.get('export') == 'excel':
-        # Get all visits from the database
-        all_visits = Visit.objects.all().order_by('-scheduled_date')
-        return export_visits_to_excel(request, all_visits, f'visitas_dashboard_{timezone.now().strftime("%Y%m%d")}.xlsx')
-
     context = {
         'today_visits': today_visits,
         'upcoming_visits': upcoming_visits,
         'recent_visits': recent_visits,
-        'total_visits': total_visits,
+        'now': now,
         'today_visits_count': today_visits_count,
         'upcoming_visits_count': upcoming_visits_count,
-        'users': users,
-        'user_list_url': 'users:user_list',
+        'recent_visits_count': recent_visits_count,
+        'total_visits': total_visits_count,  # Changed from total_visits_count to match template
+        'users': users,  # Add users to the context
     }
-    return render(request, 'dashboard.html', context)
+    
+    return render(request, 'agenda/dashboard/dashboard.html', context)
 
 @login_required
 def reports(request):
-    """View to display past visits with filtering capabilities."""
-    today = datetime.date.today()
+    # Get filter parameters
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    status = request.GET.get('status')
     
-    if request.method == 'POST':
-        form = VisitFilterForm(request.POST)
-        if form.is_valid():
-            start_date = form.cleaned_data['start_date']
-            end_date = form.cleaned_data['end_date']
-            visit_type = form.cleaned_data['visit_type']
-            status = form.cleaned_data['status']
-            
-            # Filter for completed visits by default
-            visits = Visit.objects.filter(status='completed')
-            
-            if start_date:
-                visits = visits.filter(scheduled_date__gte=start_date)
-            if end_date:
-                visits = visits.filter(scheduled_date__lte=end_date)
-            if visit_type:
-                visits = visits.filter(visit_type=visit_type)
-            
-            visits = visits.order_by('-scheduled_date')
-            
-            if request.GET.get('export') == 'excel':
-                return export_visits_to_excel(visits)
-            
-            context = {
-                'form': form,
-                'visits': visits,
-            }
-            return render(request, 'agenda/reports.html', context)
-    else:
-        form = VisitFilterForm()
-        # Filter for completed visits by default
-        visits = Visit.objects.filter(status='completed').order_by('-scheduled_date')
-        
-        if request.GET.get('export') == 'excel':
-            return export_visits_to_excel(request, visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
-        
-        context = {
-            'form': form,
-            'visits': visits,
-        }
-        return render(request, 'agenda/reports.html', context)
+    # Build query
+    visits = Visit.objects.all()
+    
+    # Apply filters
+    if start_date:
+        start_date = timezone.make_aware(datetime.datetime.strptime(start_date, '%Y-%m-%d'))
+        visits = visits.filter(scheduled_date__gte=start_date)
+    
+    if end_date:
+        end_date = timezone.make_aware(datetime.datetime.strptime(end_date, '%Y-%m-%d'))
+        visits = visits.filter(scheduled_date__lte=end_date)
+    
+    if status:
+        visits = visits.filter(status=status)
+    
+    # Order by scheduled_date descending by default
+    visits = visits.order_by('-scheduled_date')
+    
+    # Handle Excel export
+    if request.GET.get('export') == 'excel':
+        filename = f'visitas_relatorio_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        return export_visits_to_excel(request, visits, filename)
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(visits, 25)
+    
+    try:
+        visits = paginator.page(page)
+    except PageNotAnInteger:
+        visits = paginator.page(1)
+    except EmptyPage:
+        visits = paginator.page(paginator.num_pages)
+    
+    context = {
+        'visits': visits,
+        'filter_form': VisitFilterForm(request.GET or None),
+        'start_date': start_date.strftime('%Y-%m-%d') if start_date else '',
+        'end_date': end_date.strftime('%Y-%m-%d') if end_date else '',
+        'status': status,
+    }
+    
+    return render(request, 'agenda/reports.html', context)
 
 @login_required
 def visit_list(request):
     visits = Visit.objects.all().order_by('-scheduled_date')
     
-    # Handle success message
-    if request.GET.get('success') == '1':
-        messages.success(request, 'Sua senha foi alterada com sucesso!')
+    # Apply filters based on query parameters
+    if request.GET.get('today') == '1':
+        today = timezone.localdate()
+        visits = visits.filter(scheduled_date__date=today)
+    elif request.GET.get('status') == 'scheduled':
+        visits = visits.filter(status='scheduled')
     
     # Handle Excel export
     if request.GET.get('export') == 'excel':
-        visits = Visit.objects.all().order_by('-scheduled_date')
-        return export_visits_to_excel(request, visits, f'visitas_{timezone.now().strftime("%Y%m%d")}.xlsx')
-
+        filename = f'visitas_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        return export_visits_to_excel(request, visits, filename)
+    
+    # Add pagination
+    paginator = Paginator(visits, 25)  # Show 25 visits per page
+    page = request.GET.get('page')
+    try:
+        visits = paginator.page(page)
+    except PageNotAnInteger:
+        visits = paginator.page(1)
+    except EmptyPage:
+        visits = paginator.page(paginator.num_pages)
+    
     context = {
         'visits': visits,
+        'today_filter': request.GET.get('today') == '1',
+        'scheduled_filter': request.GET.get('status') == 'scheduled',
     }
-    return render(request, 'visit_list.html', context)
-
+    return render(request, 'agenda/visits/visit_list.html', context)
 
 @login_required
 def calendar_view(request):
     """Render the calendar view."""
-    return render(request, 'calendar.html')
-
+    context = {
+        'page_title': 'Calendário de Visitas',
+    }
+    return render(request, 'agenda/calendar.html', context)
 
 @login_required
-@require_http_methods(["GET"])
 def visit_calendar_events(request):
     """API endpoint for calendar events."""
-    start_date = request.GET.get('start')
-    end_date = request.GET.get('end')
+    from django.http import JsonResponse
+    from django.urls import reverse
+    from django.conf import settings
+    
+    def json_response(data, status=200):
+        response = JsonResponse(data, safe=False, json_dumps_params={'ensure_ascii': False})
+        response['Access-Control-Allow-Origin'] = settings.ALLOWED_HOSTS[0] if hasattr(settings, 'ALLOWED_HOSTS') and settings.ALLOWED_HOSTS else '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'X-Requested-With, Content-Type, X-CSRFToken'
+        return response
+    
+    if request.method == 'OPTIONS':
+        return json_response({})
     
     try:
-        # Parse the ISO format dates and handle timezone
-        if start_date and end_date:
-            # Handle both formats: with 'Z' and with timezone offset
-            if start_date.endswith('Z'):
-                start = timezone.make_aware(dt.fromisoformat(start_date.replace('Z', '+00:00')))
+        # Get and validate parameters
+        start = request.GET.get('start')
+        end = request.GET.get('end')
+        
+        if not start or not end:
+            return json_response({"error": "Start and end dates are required"}, status=400)
+        
+        # Parse dates
+        try:
+            if 'T' in start:
+                start_date = timezone.datetime.fromisoformat(start)
+                end_date = timezone.datetime.fromisoformat(end)
             else:
-                start = timezone.make_aware(dt.fromisoformat(start_date))
+                start_date = timezone.make_aware(datetime.datetime.strptime(start, '%Y-%m-%d'))
+                end_date = timezone.make_aware(datetime.datetime.strptime(end, '%Y-%m-%d'))
                 
-            if end_date.endswith('Z'):
-                end = timezone.make_aware(dt.fromisoformat(end_date.replace('Z', '+00:00')))
-            else:
-                end = timezone.make_aware(dt.fromisoformat(end_date))
-        else:
-            raise ValueError("Missing start or end date")
-    except (ValueError, TypeError) as e:
-        # Default to current month if dates are invalid
-        today = timezone.localtime()
-        start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        end = (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    
-    # Get visits within the date range
-    visits = Visit.objects.filter(
-        scheduled_date__gte=start,
-        scheduled_date__lte=end
-    ).order_by('scheduled_date')
-    
-    events = []
-    for visit in visits:
-        if visit.scheduled_date:
-            events.append({
-                'id': visit.id,
-                'title': f"{visit.name} - {visit.get_visit_type_display()}",
-                'start': visit.scheduled_date.isoformat(),
-                'end': (visit.scheduled_date + timedelta(hours=1)).isoformat(),
-                'url': f"/visit/{visit.id}/",
-                'color': get_visit_color(visit.visit_type),
-                'extendedProps': {
-                    'visit_type': visit.visit_type,
-                    'address': visit.address,
-                    'description': visit.description,
-                    'status': visit.status,
+            if timezone.is_naive(start_date):
+                start_date = timezone.make_aware(start_date)
+            if timezone.is_naive(end_date):
+                end_date = timezone.make_aware(end_date)
+                
+        except (ValueError, TypeError):
+            return json_response({"error": "Invalid date format"}, status=400)
+        
+        # Get visits in date range
+        try:
+            visits = Visit.objects.filter(
+                scheduled_date__range=(start_date, end_date)
+            ).select_related('created_by').order_by('scheduled_date')
+            
+            events = []
+            for visit in visits:
+                if not visit.scheduled_date:
+                    continue
+                    
+                event = {
+                    'id': visit.id,
+                    'title': visit.title or 'No title',
+                    'start': visit.scheduled_date.isoformat(),
+                    'end': (visit.scheduled_date + datetime.timedelta(hours=1)).isoformat(),
+                    'url': reverse('agenda:visit_detail', args=[visit.id]),
+                    'color': get_visit_color(visit.visit_type),
+                    'extendedProps': {
+                        'visit_type': visit.get_visit_type_display() if hasattr(visit, 'get_visit_type_display') else 'Not specified',
+                        'status': visit.status,
+                        'status_display': visit.get_status_display() if hasattr(visit, 'get_status_display') else 'Unknown',
+                        'created_by': visit.created_by.username if visit.created_by else 'System',
+                    },
                 }
-            })
-    
-    return JsonResponse(events, safe=False)
-
+                events.append(event)
+            
+            return json_response(events)
+            
+        except Exception as e:
+            return json_response({"error": "Error fetching visits"}, status=500)
+            
+    except Exception as e:
+        return json_response({"error": "An error occurred"}, status=500)
 
 def get_visit_color(visit_type):
     """Return color based on visit type."""
     colors = {
-        'visit': '#0d6efd',  # Blue
-        'phone': '#6f42c1',  # Purple
-        'email': '#20c997',  # Teal
+        'viewing': '#007bff',  # Blue
+        'evaluation': '#28a745',  # Green
+        'signature': '#17a2b8',  # Cyan
+        'other': '#6c757d',  # Gray
     }
     return colors.get(visit_type, '#6c757d')  # Default to gray
 
 @login_required
 def visit_detail(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
-    return render(request, 'visit_detail.html', {'visit': visit})
-
-
+    return render(request, 'agenda/visits/detail.html', {'visit': visit})
 
 @login_required
 def visit_create(request):
@@ -237,6 +289,10 @@ def visit_create(request):
                     visit.scheduled_date = timezone.localtime(visit.scheduled_date)
                 
                 visit.save()
+                # Clear all existing messages
+                storage = messages.get_messages(request)
+                storage.used = True
+                # Add success message
                 messages.success(request, 'Visita criada com sucesso!')
                 return redirect('agenda:visit_list')
             except Exception as e:
@@ -247,7 +303,7 @@ def visit_create(request):
         # Set initial time to next hour by default, in local time
         next_hour = timezone.localtime().replace(minute=0, second=0, microsecond=0) + timezone.timedelta(hours=1)
         form = VisitForm(initial={'scheduled_date': next_hour})
-    return render(request, 'visit_form.html', {'form': form})
+    return render(request, 'agenda/visits/form.html', {'form': form})
 
 @login_required
 def visit_edit(request, pk):
@@ -265,6 +321,10 @@ def visit_edit(request, pk):
                     visit.scheduled_date = timezone.localtime(visit.scheduled_date)
                 
                 visit.save()
+                # Clear all existing messages
+                storage = messages.get_messages(request)
+                storage.used = True
+                # Add success message
                 messages.success(request, 'Visita atualizada com sucesso!')
                 return redirect('agenda:visit_detail', pk=visit.pk)
             except Exception as e:
@@ -274,15 +334,20 @@ def visit_edit(request, pk):
         if visit.scheduled_date and not timezone.is_aware(visit.scheduled_date):
             visit.scheduled_date = timezone.make_aware(visit.scheduled_date)
         form = VisitForm(instance=visit)
-    return render(request, 'visit_form.html', {'form': form, 'visit': visit})
+    return render(request, 'agenda/visits/form.html', {'form': form, 'visit': visit})
 
 @login_required
 def visit_delete(request, pk):
     visit = get_object_or_404(Visit, pk=pk)
     if request.method == 'POST':
         visit.delete()
+        # Clear all existing messages
+        storage = messages.get_messages(request)
+        storage.used = True
+        # Add success message
+        messages.success(request, 'Visita excluída com sucesso!')
         return redirect('agenda:visit_list')
-    return render(request, 'visit_confirm_delete.html', {'visit': visit})
+    return render(request, 'agenda/visits/confirm_delete.html', {'visit': visit})
 
 @login_required
 def export_visits_to_excel(request, visits, filename):
@@ -292,9 +357,9 @@ def export_visits_to_excel(request, visits, filename):
     
     # Add headers
     headers = [
-        'Data/Hora', 'Tipo', 'Nome', 'Transação', 'Morada', 'Email',
-        'Telefone', 'Preço €', 'Estado', 'Comentários', 'Criado por',
-        'Criado em', 'Atualizado em'
+        'Título', 'Tipo', 'Cliente', 'Email', 'Telefone', 'Morada', 'Preço',
+        'Tipo de Imóvel', 'Área', 'Quartos', 'Casas de Banho', 'Estado',
+        'Data Agendada', 'Criado por', 'Criado em', 'Atualizado em', 'Comentários'
     ]
     
     # Style header
@@ -306,27 +371,23 @@ def export_visits_to_excel(request, visits, filename):
     
     # Add data
     for row_num, visit in enumerate(visits, 2):
-        # Format datetimes with timezone handling
-        def format_datetime(dt_value):
-            if not dt_value:
-                return ''
-            if timezone.is_naive(dt_value):
-                dt_value = timezone.make_aware(dt_value)
-            return timezone.localtime(dt_value).strftime("%d/%m/%Y %H:%M")
-        
-        ws.cell(row=row_num, column=1, value=format_datetime(visit.scheduled_date))
+        ws.cell(row=row_num, column=1, value=visit.title)
         ws.cell(row=row_num, column=2, value=visit.get_visit_type_display())
-        ws.cell(row=row_num, column=3, value=visit.name)
-        ws.cell(row=row_num, column=4, value=visit.get_transaction_type_display() if visit.transaction_type else '')
-        ws.cell(row=row_num, column=5, value=visit.address or '')
-        ws.cell(row=row_num, column=6, value=visit.email or '')
-        ws.cell(row=row_num, column=7, value=visit.phone or '')
-        ws.cell(row=row_num, column=8, value=str(visit.price) if visit.price is not None else '')
-        ws.cell(row=row_num, column=9, value=visit.get_status_display())
-        ws.cell(row=row_num, column=10, value=visit.comment or '')
-        ws.cell(row=row_num, column=11, value=getattr(visit.created_by, 'username', 'N/A'))
-        ws.cell(row=row_num, column=12, value=format_datetime(visit.created_at))
-        ws.cell(row=row_num, column=13, value=format_datetime(visit.updated_at))
+        ws.cell(row=row_num, column=3, value=visit.client_name)
+        ws.cell(row=row_num, column=4, value=visit.client_email or '')
+        ws.cell(row=row_num, column=5, value=visit.client_phone or '')
+        ws.cell(row=row_num, column=6, value=visit.property_address or '')
+        ws.cell(row=row_num, column=7, value=str(visit.property_price) if visit.property_price else '')
+        ws.cell(row=row_num, column=8, value=visit.get_property_type_display() if visit.property_type else '')
+        ws.cell(row=row_num, column=9, value=visit.property_area or '')
+        ws.cell(row=row_num, column=10, value=visit.property_bedrooms or '')
+        ws.cell(row=row_num, column=11, value=visit.property_bathrooms or '')
+        ws.cell(row=row_num, column=12, value=visit.get_status_display())
+        ws.cell(row=row_num, column=13, value=visit.scheduled_date.strftime("%d/%m/%Y %H:%M") if visit.scheduled_date else '')
+        ws.cell(row=row_num, column=14, value=getattr(visit.created_by, 'username', 'N/A'))
+        ws.cell(row=row_num, column=15, value=visit.created_at.strftime("%d/%m/%Y %H:%M") if visit.created_at else '')
+        ws.cell(row=row_num, column=16, value=visit.updated_at.strftime("%d/%m/%Y %H:%M") if visit.updated_at else '')
+        ws.cell(row=row_num, column=17, value=visit.comments or '')
     
     # Adjust column widths
     for col in ws.columns:
@@ -349,13 +410,6 @@ def export_visits_to_excel(request, visits, filename):
     wb.save(response)
     return response
 
-def visit_delete(request, pk):
-    visit = get_object_or_404(Visit, pk=pk)
-    if request.method == 'POST':
-        visit.delete()
-        return redirect('agenda:visit_list')
-    return render(request, 'visit_confirm_delete.html', {'visit': visit})
-
 # User management views
 
 def user_login(request):
@@ -368,7 +422,7 @@ def user_login(request):
             return redirect('agenda:dashboard')
         else:
             messages.error(request, 'Nome de usuário ou senha inválidos.')
-    return render(request, 'agenda/login.html')
+    return render(request, 'agenda/auth/login.html')
 
 def user_logout(request):
     logout(request)

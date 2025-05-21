@@ -22,19 +22,7 @@ class Visit(models.Model):
     address = models.CharField(max_length=500, verbose_name='Morada', blank=True, null=True)
     description = models.TextField(verbose_name='Descrição', blank=True, null=True)
     visit_type = models.CharField(max_length=10, choices=VISIT_TYPES, default='visit', verbose_name='Tipo de Visita')
-    def _make_timezone_aware(value):
-        if value and timezone.is_naive(value):
-            return timezone.make_aware(value)
-        return value
-
-    def _get_scheduled_date(self):
-        return self._scheduled_date
-
-    def _set_scheduled_date(self, value):
-        self._scheduled_date = self._make_timezone_aware(value)
-
-    scheduled_date = property(_get_scheduled_date, _set_scheduled_date)
-    _scheduled_date = models.DateTimeField(verbose_name='Data/Hora Agendada')
+    scheduled_date = models.DateTimeField(verbose_name='Data/Hora Agendada')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled', verbose_name='Status')
     email = models.EmailField(verbose_name='Email', blank=True, null=True)
     phone = models.CharField(max_length=20, verbose_name='Telefone', blank=True, null=True)
@@ -60,11 +48,18 @@ class Visit(models.Model):
         ordering = ['-scheduled_date']
     
     def save(self, *args, **kwargs):
-        # Ensure scheduled_date is timezone-aware through the property setter
-        if hasattr(self, 'scheduled_date'):
-            self.scheduled_date = self.scheduled_date
+        # Ensure scheduled_date is timezone-aware
+        if self.scheduled_date:
+            if timezone.is_naive(self.scheduled_date):
+                # If naive, make it aware using the current timezone
+                self.scheduled_date = timezone.make_aware(
+                    self.scheduled_date,
+                    timezone.get_current_timezone()
+                )
+            # Ensure it's in the current timezone
+            self.scheduled_date = timezone.localtime(self.scheduled_date)
         
-        # Update updated_at timestamp
+        # Update updated_at timestamp with timezone-aware datetime
         self.updated_at = timezone.now()
         
         try:

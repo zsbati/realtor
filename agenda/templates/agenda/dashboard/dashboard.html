@@ -1,0 +1,538 @@
+{% extends 'agenda/base.html' %}
+{% load static visit_tags %}
+
+{% block title %}Painel de Controle{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        margin-bottom: 1.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .table th {
+        white-space: nowrap;
+    }
+    .action-buttons .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    /* Ensure all badges have dark text */
+    .badge {
+        color: #212529 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Visitas Hoje</h5>
+                        <i class="fas fa-calendar-day fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="display-5 mb-0">{{ today_visits_count }}</h2>
+                    <div class="mt-auto">
+                        <a href="{% url 'agenda:visit_list' %}?today=1" class="text-white text-decoration-underline">Ver de hoje</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-success text-white h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Total de Visitas</h5>
+                        <i class="fas fa-list-check fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="display-5 mb-0">{{ total_visits }}</h2>
+                    <div class="mt-auto">
+                        <a href="{% url 'agenda:visit_list' %}" class="text-white text-decoration-underline">Ver todas as visitas</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card bg-info text-white h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Próximas Visitas</h5>
+                        <i class="fas fa-calendar-week fa-2x opacity-50"></i>
+                    </div>
+                    <h2 class="display-5 mb-0">{{ upcoming_visits_count }}</h2>
+                    <div class="mt-auto">
+                        <a href="{% url 'agenda:visit_list' %}?status=scheduled" class="text-white text-decoration-underline">Ver agendadas</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Visits -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-day me-2"></i>Visitas de Hoje
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <select name="status" id="today-status" class="form-select form-select-sm" onchange="filterByStatus('today', this.value)">
+                            <option value="">Todos os estados</option>
+                            <option value="scheduled">Agendado</option>
+                            <option value="completed">Concluído</option>
+                            <option value="cancelled">Cancelado</option>
+                            <option value="forgotten">Esquecido</option>
+                        </select>
+                        <a href="{% url 'agenda:visit_list' %}?today=1" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i> Ver Todas
+                        </a>
+                        <a href="{% url 'agenda:dashboard' %}?export=excel" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if today_visits %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Título</th>
+                                        <th>Hora</th>
+                                        <th>Transação</th>
+                                        <th>Tipo</th>
+                                        <th>Preço (€)</th>
+                                        <th>Estado</th>
+                                        <th class="text-end pe-3">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for visit in today_visits %}
+                                    <tr class="align-middle">
+                                        <td class="ps-3">
+                                            <div class="fw-semibold">{{ visit.title|truncatechars:20 }}</div>
+                                            <small class="text-muted">{{ visit.name|default:"Sem nome" }}</small>
+                                        </td>
+                                        <td>{{ visit.scheduled_date|time:"H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ visit.visit_type|default:'secondary' }}">
+                                                {{ visit.get_visit_type_display|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>{{ visit.price|default:"-" }}</td>
+                                        <td>{% status_badge visit.status visit.get_status_display %}</td>
+                                        <td class="text-end pe-3 action-buttons">
+                                            {% action_buttons visit %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="far fa-calendar-xmark fa-3x mb-3"></i>
+                            <p class="mb-0">Nenhuma visita agendada para hoje.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Visits -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-week me-2"></i>Próximas Visitas
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <select name="status" id="upcoming-status" class="form-select form-select-sm" onchange="filterByStatus('upcoming', this.value)">
+                            <option value="">Todos os estados</option>
+                            <option value="scheduled">Agendado</option>
+                            <option value="completed">Concluído</option>
+                            <option value="cancelled">Cancelado</option>
+                            <option value="forgotten">Esquecido</option>
+                        </select>
+                        <a href="{% url 'agenda:visit_list' %}?upcoming=1" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i> Ver Todas
+                        </a>
+                        <a href="{% url 'agenda:dashboard' %}?export=upcoming" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_visits %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Título</th>
+                                        <th>Data/Hora</th>
+                                        <th>Transação</th>
+                                        <th>Tipo</th>
+                                        <th>Preço (€)</th>
+                                        <th>Estado</th>
+                                        <th class="text-end pe-3">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for visit in upcoming_visits %}
+                                    <tr class="align-middle">
+                                        <td class="ps-3">
+                                            <div class="fw-semibold">{{ visit.title|truncatechars:20 }}</div>
+                                            <small class="text-muted">{{ visit.name|default:"Sem nome" }}</small>
+                                        </td>
+                                        <td>{{ visit.scheduled_date|date:"d/m H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ visit.visit_type|default:'secondary' }}">
+                                                {{ visit.get_visit_type_display|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>{{ visit.price|default:"-" }}</td>
+                                        <td>{% status_badge visit.status visit.get_status_display %}</td>
+                                        <td class="text-end pe-3 action-buttons">
+                                            {% action_buttons visit %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="far fa-calendar-xmark fa-3x mb-3"></i>
+                            <p class="mb-0">Nenhuma visita agendada para os próximos dias.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Visits -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Visitas Recentes
+                    </h5>
+                    <div class="d-flex gap-2">
+                        <select name="status" id="recent-status" class="form-select form-select-sm" onchange="filterByStatus('recent', this.value)">
+                            <option value="">Todos os estados</option>
+                            <option value="scheduled">Agendado</option>
+                            <option value="completed">Concluído</option>
+                            <option value="cancelled">Cancelado</option>
+                            <option value="forgotten">Esquecido</option>
+                        </select>
+                        <a href="{% url 'agenda:visit_list' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i> Ver Todas
+                        </a>
+                        <a href="{% url 'agenda:dashboard' %}?export=recent" class="btn btn-sm btn-outline-success" title="Exportar para Excel">
+                            <i class="fas fa-file-excel"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_visits %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-3">Título</th>
+                                        <th>Data/Hora</th>
+                                        <th>Transação</th>
+                                        <th>Tipo</th>
+                                        <th>Preço (€)</th>
+                                        <th>Estado</th>
+                                        <th class="text-end pe-3">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for visit in recent_visits %}
+                                    <tr class="align-middle">
+                                        <td class="ps-3">
+                                            <div class="fw-semibold">{{ visit.title|truncatechars:20 }}</div>
+                                            <small class="text-muted">{{ visit.name|default:"Sem nome" }}</small>
+                                        </td>
+                                        <td>{{ visit.scheduled_date|date:"d/m H:i" }}</td>
+                                        <td>{{ visit.get_transaction_type_display|default:"-" }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ visit.visit_type|default:'secondary' }}">
+                                                {{ visit.get_visit_type_display|default:"-" }}
+                                            </span>
+                                        </td>
+                                        <td>{{ visit.price|default:"-" }}</td>
+                                        <td>{% status_badge visit.status visit.get_status_display %}</td>
+                                        <td class="text-end pe-3 action-buttons">
+                                            {% action_buttons visit %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="far fa-calendar-xmark fa-3x mb-3"></i>
+                            <p class="mb-0">Nenhuma visita recente encontrada.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Usuários</h5>
+                    <a href="{% url 'users:user_list' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Adicionar Usuário
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Email</th>
+                                    <th>Staff</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.is_staff %}
+                                        <span class="badge bg-success">Sim</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Não</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'users:update_user' user.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a href="{% url 'users:delete_user' user.id %}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visit Detail Modal -->
+    <div class="modal fade" id="visitDetailModal" tabindex="-1" aria-labelledby="visitDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="visitDetailModalLabel">Detalhes da Visita</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="visitDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visit Detail Modal -->
+    <div class="modal fade" id="visitDetailModal" tabindex="-1" aria-labelledby="visitDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="visitDetailModalLabel">Detalhes da Visita</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="visitDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to handle status filtering
+        function filterByStatus(section, status) {
+            console.log(`Filtering ${section} by status:`, status);
+            
+            // Find the card that contains the select element
+            const selectElement = document.getElementById(`${section}-status`);
+            if (!selectElement) {
+                console.error('Select element not found');
+                return;
+            }
+            
+            const card = selectElement.closest('.card');
+            if (!card) {
+                console.error('Card element not found');
+                return;
+            }
+            
+            // Find all rows in this section's table
+            const table = card.querySelector('table');
+            if (!table) {
+                console.error('Table not found in card');
+                return;
+            }
+            
+            const rows = table.querySelectorAll('tbody tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                // Find the status badge in the row - look for a badge with data-status attribute
+                const statusBadge = row.querySelector('[data-status]');
+                if (!statusBadge) {
+                    console.log('No element with data-status found in row');
+                    return;
+                }
+                
+                const rowStatus = statusBadge.getAttribute('data-status');
+                console.log('Row status:', rowStatus, 'Filter status:', status);
+                
+                if (!status || rowStatus === status) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            console.log(`Visible rows: ${visibleCount}`);
+            
+            // Show/hide empty state and table container
+            const emptyState = card.querySelector('.empty-state');
+            const tableContainer = card.querySelector('.table-responsive');
+            
+            if (visibleCount === 0) {
+                console.log('No rows visible, showing empty state');
+                if (emptyState) emptyState.style.display = 'block';
+                if (tableContainer) tableContainer.style.display = 'none';
+            } else {
+                console.log('Rows are visible, hiding empty state');
+                if (emptyState) emptyState.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'block';
+            }
+            
+            // Update URL without reloading the page
+            const url = new URL(window.location);
+            if (status) {
+                url.searchParams.set(`${section}_filter`, status);
+            } else {
+                url.searchParams.delete(`${section}_filter`);
+            }
+            window.history.replaceState({}, '', url);
+        }
+
+        // Function to initialize all dashboard functionality
+        function initializeDashboard() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Hide all empty states by default
+            document.querySelectorAll('.empty-state').forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // Initialize any existing filter values from URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Set up each section's filter
+            ['today', 'upcoming', 'recent'].forEach(section => {
+                const filterValue = urlParams.get(`${section}_filter`);
+                const select = document.getElementById(`${section}-status`);
+                
+                if (select) {
+                    // Add event listener for filter changes
+                    select.addEventListener('change', function() {
+                        filterByStatus(section, this.value);
+                    });
+                    
+                    // Apply initial filter if present in URL
+                    if (filterValue) {
+                        select.value = filterValue;
+                        filterByStatus(section, filterValue);
+                    }
+                }
+            });
+            
+            // Handle export buttons
+            document.querySelectorAll('a[href*="export="]').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.location.href = this.href;
+                });
+            });
+
+            // Handle action buttons
+            document.querySelectorAll('.action-buttons a').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (this.getAttribute('onclick') || this.href.includes('delete')) {
+                        return; // Let default behavior for delete buttons
+                    }
+                    e.preventDefault();
+                    window.location.href = this.href;
+                });
+            });
+        }
+        
+        // Run initialization when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+        
+        // Also run initialization when the page is fully loaded (including images)
+        window.addEventListener('load', function() {
+            // Re-apply filters in case some content was loaded after DOMContentLoaded
+            const urlParams = new URLSearchParams(window.location.search);
+            ['today', 'upcoming', 'recent'].forEach(section => {
+                const filterValue = urlParams.get(`${section}_filter`);
+                if (filterValue) {
+                    const select = document.getElementById(`${section}-status`);
+                    if (select) {
+                        filterByStatus(section, filterValue);
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

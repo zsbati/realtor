@@ -1,0 +1,179 @@
+{% extends 'agenda/base.html' %}
+{% load static %}
+
+{% block title %}Calendário de Visitas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Calendário de Visitas</h2>
+    
+    <!-- Error Alert -->
+    <div id="calendar-error" class="alert alert-danger d-none" role="alert">
+        <h4 class="alert-heading">Erro ao carregar o calendário</h4>
+        <p id="error-message"></p>
+        <hr>
+        <p class="mb-0">Por favor, recarregue a página para tentar novamente.</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js'></script>
+
+<script>
+// Show error to user
+function showError(message) {
+    const errorDiv = document.getElementById('calendar-error');
+    const errorMessage = document.getElementById('error-message');
+    if (errorDiv && errorMessage) {
+        errorMessage.textContent = message;
+        errorDiv.classList.remove('d-none');
+    }
+    console.error('Calendar Error:', message);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing calendar...');
+    
+    var calendarEl = document.getElementById('calendar');
+    if (!calendarEl) {
+        showError('Elemento do calendário não encontrado na página.');
+        return;
+    }
+    
+    // Debug CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        logDebug(`Got cookie '${name}':`, cookieValue ? 'Found' : 'Not found');
+        return cookieValue;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    
+    // Check if user is authenticated
+    if ('{{ user.is_authenticated|default:"False" }}' === 'False') {
+        showError('Você precisa estar logado para visualizar o calendário.');
+        return;
+    }
+    
+    // Check if URL is available
+    const eventsUrl = '{% url "agenda:visit_calendar_events" %}';
+    if (!eventsUrl) {
+        showError('URL do calendário não configurada corretamente.');
+        return;
+    }
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'pt-br',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        loading: function(isLoading) {
+            console.log('Calendar loading:', isLoading ? 'started' : 'finished');
+        },
+        events: function(fetchInfo, successCallback, failureCallback) {
+            try {
+                const startStr = encodeURIComponent(fetchInfo.startStr);
+                const endStr = encodeURIComponent(fetchInfo.endStr);
+                const url = `{% url "agenda:visit_calendar_events" %}?start=${startStr}&end=${endStr}&_=${Date.now()}`;
+                
+                console.log('Fetching events from:', url);
+                
+                fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': '{{ csrf_token }}'  // Using template tag instead of cookie
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`Erro no servidor (${response.status}): ${text || 'Sem detalhes'}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received', data ? data.length : 0, 'events');
+                    if (!data || data.length === 0) {
+                        showError('Nenhum evento encontrado para o período selecionado.');
+                    }
+                    successCallback(data || []);
+                })
+                .catch(error => {
+                    const errorMsg = `Erro ao carregar eventos: ${error.message || 'Erro desconhecido'}`;
+                    showError(errorMsg);
+                    failureCallback(error);
+                });
+            } catch (error) {
+                const errorMsg = `Erro ao processar eventos: ${error.message || 'Erro desconhecido'}`;
+                showError(errorMsg);
+                failureCallback(error);
+            }
+        },
+        eventClick: function(info) {
+            // Open visit detail in a new tab when an event is clicked
+            if (info.event.url) {
+                window.open(info.event.url, '_blank');
+                info.jsEvent.preventDefault();
+            }
+        },
+        eventTimeFormat: { 
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        },
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia',
+            list: 'Lista'
+        },
+        firstDay: 1, // Monday as first day of the week
+        navLinks: true,
+        editable: false,
+        selectable: true,
+        nowIndicator: true
+    });
+    
+    calendar.render();
+});
+</script>
+
+<style>
+.fc-event {
+    cursor: pointer;
+}
+.fc-event:hover {
+    opacity: 0.8;
+}
+</style>
+{% endblock %}

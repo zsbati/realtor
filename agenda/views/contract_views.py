@@ -15,17 +15,17 @@ def contract_list(request):
     
     # Handle Excel export
     if request.GET.get('export') == 'excel':
-        return export_contracts_to_excel(contracts)
+        return export_contracts_to_excel(request, contracts)
     
     context = {
         'contracts': contracts,
     }
-    return render(request, 'agenda/contract_list.html', context)
+    return render(request, 'agenda/contracts/contract_list.html', context)
 
 @login_required
 def contract_detail(request, pk):
     contract = get_object_or_404(Contract, pk=pk)
-    return render(request, 'agenda/contract_detail.html', {'contract': contract})
+    return render(request, 'agenda/contracts/detail.html', {'contract': contract})
 
 @login_required
 def contract_create(request):
@@ -35,11 +35,15 @@ def contract_create(request):
             contract = form.save(commit=False)
             contract.created_by = request.user
             contract.save()
+            # Clear all existing messages
+            storage = messages.get_messages(request)
+            storage.used = True
+            # Add success message
             messages.success(request, 'Contrato criado com sucesso!')
             return redirect('agenda:contract_list')
     else:
         form = ContractForm()
-    return render(request, 'agenda/contract_form.html', {'form': form})
+    return render(request, 'agenda/contracts/form.html', {'form': form})
 
 @login_required
 def contract_edit(request, pk):
@@ -48,22 +52,30 @@ def contract_edit(request, pk):
         form = ContractForm(request.POST, instance=contract)
         if form.is_valid():
             contract = form.save()
+            # Clear all existing messages
+            storage = messages.get_messages(request)
+            storage.used = True
+            # Add success message
             messages.success(request, 'Contrato atualizado com sucesso!')
             return redirect('agenda:contract_list')
     else:
         form = ContractForm(instance=contract)
-    return render(request, 'agenda/contract_form.html', {'form': form})
+    return render(request, 'agenda/contracts/form.html', {'form': form, 'contract': contract})
 
 @login_required
 def contract_delete(request, pk):
     contract = get_object_or_404(Contract, pk=pk)
     if request.method == 'POST':
         contract.delete()
+        # Clear all existing messages
+        storage = messages.get_messages(request)
+        storage.used = True
+        # Add success message
+        messages.success(request, 'Contrato apagado com sucesso!')
         return redirect('agenda:contract_list')
-    return render(request, 'agenda/contract_confirm_delete.html', {'contract': contract})
+    return render(request, 'agenda/contracts/confirm_delete.html', {'contract': contract})
 
-@login_required
-def export_contracts_to_excel(contracts):
+def export_contracts_to_excel(request, contracts):
     wb = Workbook()
     ws = wb.active
     ws.title = "Contratos"
