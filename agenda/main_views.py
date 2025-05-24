@@ -105,8 +105,8 @@ def reports(request):
     end_date = request.GET.get('end_date')
     status = request.GET.get('status')
     
-    # Build query
-    visits = Visit.objects.all()
+    # Build query - only show completed visits by default
+    visits = Visit.objects.filter(status='completed')
     
     # Apply filters
     if start_date:
