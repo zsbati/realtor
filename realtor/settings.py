@@ -47,6 +47,10 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# Favicon configuration
+FAVICON_PATH = 'images/favicon.ico'
+FAVICON_URL = STATIC_URL + FAVICON_PATH
+
 # Templates configuration
 TEMPLATES = [
     {
@@ -69,6 +73,7 @@ TEMPLATES = [
         },
     },
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
