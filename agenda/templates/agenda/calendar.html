@@ -4,9 +4,16 @@
 {% block title %}Calendário de Visitas{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Calendário de Visitas</h2>
-    
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Calendário de Visitas</h1>
+        <div>
+            <a href="{% url 'agenda:visit_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nova Visita
+            </a>
+        </div>
+    </div>
+
     <!-- Error Alert -->
     <div id="calendar-error" class="alert alert-danger d-none" role="alert">
         <h4 class="alert-heading">Erro ao carregar o calendário</h4>
@@ -14,11 +21,32 @@
         <hr>
         <p class="mb-0">Por favor, recarregue a página para tentar novamente.</p>
     </div>
-    
-    <div class="card">
-        <div class="card-body">
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-3">
             <div id="calendar"></div>
         </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <span class="badge bg-primary p-2">
+                    <i class="fas fa-home me-1"></i> Visita Presencial
+                </span>
+                <span class="badge bg-purple p-2">
+                    <i class="fas fa-phone me-1"></i> Telefone
+                </span>
+                <span class="badge bg-teal p-2">
+                    <i class="fas fa-envelope me-1"></i> E-mail
+                </span>
+                <span class="badge bg-secondary p-2">
+                    <i class="fas fa-calendar me-1"></i> Outros
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
     </div>
 </div>
 {% endblock %}
