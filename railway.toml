@@ -1,0 +1,16 @@
+[project]
+name = "realtor-demo"
+
+[build]
+image = "python:3.10"
+
+[deploy]
+command = "python manage.py collectstatic --noinput && gunicorn realtor.wsgi:application"
+
+[environment]
+DJANGO_SETTINGS_MODULE = "realtor.settings_production"
+SECRET_KEY = "your-secret-key-here"  # This will be replaced with a secure key in Railway
+
+[database]
+name = "postgres"
+size = "free"
