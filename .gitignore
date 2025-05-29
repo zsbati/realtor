@@ -35,7 +35,8 @@ ENV/
 local_settings.py
 
 # Database
-db.sqlite3
+!db.sqlite3
+# Exclude database only for deployment
 
 # Environment variables
 .env
