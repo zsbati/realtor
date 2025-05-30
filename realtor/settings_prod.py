@@ -1,36 +1,29 @@
-from .settings import *
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ['your-domain.com']  # Change this to your actual domain
-
-# Database
+# Database configuration for PythonAnywhere
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'your_database_name',
+        'USER': 'your_username',
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': 'your_pythonanywhere_host',
+        'PORT': '5432',
     }
 }
 
-# Static files (CSS, JavaScript, Images)
+# Static files configuration
+STATIC_ROOT = '/home/zsbati/realtor/static'
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-
-# For PythonAnywhere, you might need to adjust this
-# STATIC_ROOT = '/home/yourusername/realtor/static'
-
-# For Appliku, keep the default settings
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Security settings
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+DEBUG = False
+SECURE_SSL_REDIRECT = False  # PythonAnywhere handles SSL
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
-# Email settings
-# Add your email backend settings here if needed
+# Email settings (if needed)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
